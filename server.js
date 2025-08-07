@@ -1,356 +1,209 @@
-require('dotenv').config();
-const express = require('express');
-const nodemailer = require('nodemailer');
-const PdfPrinter = require('pdfmake');
-const path = require('path');
+// Client-side JavaScript for contact form handling (to be included in your HTML)
 
-const app = express();
+document.addEventListener('DOMContentLoaded', function() {
+  const contactForm = document.getElementById('contact-form');
+  const downloadPdfBtn = document.getElementById('download-pdf-btn');
 
-// PDF fonts configuration
-const fonts = {
-  Roboto: {
-    normal: 'Helvetica',
-    bold: 'Helvetica-Bold',
-    italics: 'Helvetica-Oblique',
-    bolditalics: 'Helvetica-BoldOblique'
-  }
-};
+  // Input sanitization function
+  const sanitizeInput = (input) => {
+    if (typeof input !== 'string') return '';
+    return input
+      .trim()
+      .replace(/[<>;]/g, '') // basic removal of HTML tag brackets and semicolons
+      .substring(0, 1000);   // limit to 1000 characters max for safety
+  };
 
-const printer = new PdfPrinter(fonts);
+  // Validation function
+  const validateFormData = (data) => {
+    const errors = [];
 
-// Rate limiting storage (for demo - use Redis or DB in production)
-const rateLimitStore = new Map();
-const RATE_LIMIT_WINDOW = 15 * 60 * 1000; // 15 minutes
-const RATE_LIMIT_MAX_REQUESTS = 10;
-
-// Rate limiting middleware
-const rateLimit = (req, res, next) => {
-  const clientIP = req.ip || req.connection.remoteAddress || req.socket.remoteAddress;
-  const now = Date.now();
-
-  // Clear expired entries
-  for (const [ip, data] of rateLimitStore.entries()) {
-    if (now - data.firstRequest > RATE_LIMIT_WINDOW) {
-      rateLimitStore.delete(ip);
+    // Name
+    if (!data.name || data.name.trim().length < 2) {
+      errors.push('Name must be at least 2 characters long');
     }
-  }
+    if (data.name && data.name.length > 100) {
+      errors.push('Name must be less than 100 characters');
+    }
 
-  const clientData = rateLimitStore.get(clientIP);
-  if (!clientData) {
-    rateLimitStore.set(clientIP, { firstRequest: now, count: 1 });
-    next();
-  } else if (now - clientData.firstRequest > RATE_LIMIT_WINDOW) {
-    rateLimitStore.set(clientIP, { firstRequest: now, count: 1 });
-    next();
-  } else if (clientData.count >= RATE_LIMIT_MAX_REQUESTS) {
-    return res.status(429).json({
-      success: false,
-      message: 'Too many submissions. Please wait 15 minutes before submitting again.',
+    // Email – basic regex validation
+    const emailRegex = /^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$/;
+    if (!data.email || !emailRegex.test(data.email)) {
+      errors.push('Please enter a valid email address');
+    }
+
+    // Message
+    if (!data.message || data.message.trim().length < 10) {
+      errors.push('Message must be at least 10 characters long');
+    }
+    if (data.message && data.message.length > 2000) {
+      errors.push('Message must be less than 2000 characters');
+    }
+
+    // Company (optional)
+    if (data.company && data.company.length > 100) {
+      errors.push('Company name must be less than 100 characters');
+    }
+
+    return errors;
+  };
+
+  // Show notification function
+  function showNotification(message, type = 'info', duration = 6000) {
+    // Remove existing notifications
+    const existingNotifications = document.querySelectorAll('.notification');
+    existingNotifications.forEach(notification => {
+      notification.style.transform = 'translateX(100%)';
+      setTimeout(() => notification.remove(), 300);
     });
-  } else {
-    clientData.count++;
-    next();
-  }
-};
 
-// Middleware
-app.use(express.urlencoded({ extended: true, limit: '10mb' }));
-app.use(express.json({ limit: '10mb' }));
+    const notification = document.createElement('div');
+    const isMobile = window.innerWidth < 768;
 
-// CORS and security headers
-app.use((req, res, next) => {
-  res.header('Access-Control-Allow-Origin', process.env.ALLOWED_ORIGINS || '*');
-  res.header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
-  res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept');
-  res.header('X-Content-Type-Options', 'nosniff');
-  res.header('X-Frame-Options', 'DENY');
-  res.header('X-XSS-Protection', '1; mode=block');
-  if (req.method === 'OPTIONS') {
-    res.sendStatus(200);
-  } else {
-    next();
-  }
-});
+    notification.className = `notification fixed z-[200] rounded-lg shadow-2xl transform transition-all duration-500 ease-in-out ${
+      isMobile ? 'top-4 left-4 right-4 translate-y-[-100px] opacity-0' : 'top-4 right-4 max-w-md translate-x-full'
+    }`;
 
-//app.use(express.static('.'));
-
-// Trust proxy for rate limiting if behind proxies
-app.set('trust proxy', true);
-
-// Health check
-app.get('/health', (req, res) => {
-  res.json({ status: 'OK', timestamp: new Date().toISOString() });
-});
-
-// Favicon endpoint - serve a simple SVG favicon
-app.get('/favicon.ico', (req, res) => {
-  const favicon = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
-    <rect width="32" height="32" fill="#162A80"/>
-    <text x="16" y="22" font-family="Arial, sans-serif" font-size="18" font-weight="bold" text-anchor="middle" fill="white">V</text>
-  </svg>`;
-
-  res.setHeader('Content-Type', 'image/svg+xml');
-  res.send(favicon);
-});
-
-// Serve main page (assuming index.html exists)
-app.get('/', (req, res) => {
-  res.sendFile(path.join(__dirname, 'index.html'));
-});
-
-// Input sanitization function
-const sanitizeInput = (input) => {
-  if (typeof input !== 'string') return '';
-  return input
-    .trim()
-    .replace(/[<>;]/g, '') // basic removal of HTML tag brackets and semicolons
-    .substring(0, 1000);   // limit to 1000 characters max for safety
-};
-
-// Validation function
-const validateFormData = (data) => {
-  const errors = [];
-
-  // Name
-  if (!data.name || data.name.trim().length < 2) {
-    errors.push('Name must be at least 2 characters long');
-  }
-  if (data.name && data.name.length > 100) {
-    errors.push('Name must be less than 100 characters');
-  }
-
-  // Email – basic regex validation
-  const emailRegex = /^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$/;
-  if (!data.email || !emailRegex.test(data.email)) {
-    errors.push('Please enter a valid email address');
-  }
-
-  // Message
-  if (!data.message || data.message.trim().length < 10) {
-    errors.push('Message must be at least 10 characters long');
-  }
-  if (data.message && data.message.length > 2000) {
-    errors.push('Message must be less than 2000 characters');
-  }
-
-  // Company (optional)
-  if (data.company && data.company.length > 100) {
-    errors.push('Company name must be less than 100 characters');
-  }
-
-  // Spam keyword detection
-  const spamKeywords = ['viagra', 'casino', 'lottery', 'winner', 'congratulations', 'click here', 'free money'];
-  if (data.message) {
-    const msgLower = data.message.toLowerCase();
-    for (const keyword of spamKeywords) {
-      if (msgLower.includes(keyword)) {
-        errors.push('Message contains prohibited content');
+    // Enhanced styling based on type
+    let bgClasses, textColor, icon;
+    switch (type) {
+      case 'success':
+        bgClasses = ['bg-gradient-to-r', 'from-green-500', 'to-green-600'];
+        textColor = 'text-white';
+        icon = `
+          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+          </svg>
+        `;
         break;
+      case 'error':
+        bgClasses = ['bg-gradient-to-r', 'from-red-500', 'to-red-600'];
+        textColor = 'text-white';
+        icon = `
+          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+          </svg>
+        `;
+        break;
+      default:
+        bgClasses = ['bg-gradient-to-r', 'from-blue-500', 'to-blue-600'];
+        textColor = 'text-white';
+        icon = `
+          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+          </svg>
+        `;
+    }
+
+    notification.classList.add(...bgClasses, textColor, 'border-l-4', 'border-opacity-50');
+    notification.classList.add(type === 'success' ? 'border-green-400' : 
+                             type === 'error' ? 'border-red-400' : 'border-blue-400');
+
+    notification.innerHTML = `
+      <div class="p-4">
+        <div class="flex items-start">
+          <div class="flex-shrink-0 mr-3">
+            ${icon}
+          </div>
+          <div class="flex-1 min-w-0">
+            <p class="text-sm font-medium leading-5 break-words">${message}</p>
+          </div>
+          <div class="ml-4 flex-shrink-0">
+            <button class="inline-flex text-white hover:text-gray-200 focus:outline-none focus:text-gray-200 transition-colors duration-200">
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+              </svg>
+            </button>
+          </div>
+        </div>
+      </div>
+    `;
+
+    document.body.appendChild(notification);
+
+    // Animate in
+    setTimeout(() => {
+      if (isMobile) {
+        notification.classList.remove('translate-y-[-100px]', 'opacity-0');
+        notification.classList.add('translate-y-0', 'opacity-100');
+      } else {
+        notification.classList.remove('translate-x-full');
+        notification.classList.add('translate-x-0');
+      }
+    }, 100);
+
+    // Close button handler
+    notification.querySelector('button').addEventListener('click', () => {
+      if (isMobile) {
+        notification.style.transform = 'translateY(-100px)';
+        notification.style.opacity = '0';
+      } else {
+        notification.style.transform = 'translateX(100%)';
+      }
+      setTimeout(() => {
+        if (notification.parentNode) {
+          notification.remove();
+        }
+      }, 300);
+    });
+
+    // Auto remove after specified duration
+    setTimeout(() => {
+      if (isMobile) {
+        notification.style.transform = 'translateY(-100px)';
+        notification.style.opacity = '0';
+      } else {
+        notification.style.transform = 'translateX(100%)';
+      }
+      setTimeout(() => {
+        if (notification.parentNode) {
+          notification.remove();
+        }
+      }, 500);
+    }, duration);
+  }
+
+  // Function to update PDF download button state
+  function updatePdfDownloadButton() {
+    if (!contactForm || !downloadPdfBtn) return;
+    
+    const name = contactForm.querySelector('[name="name"]').value.trim();
+    const email = contactForm.querySelector('[name="email"]').value.trim();
+    const message = contactForm.querySelector('[name="message"]').value.trim();
+    
+    const isFormValid = name.length >= 2 && 
+                       email.includes('@') && 
+                       email.includes('.') &&
+                       message.length >= 10;
+    
+    if (downloadPdfBtn) {
+      downloadPdfBtn.disabled = !isFormValid;
+      const helpText = downloadPdfBtn.parentNode.querySelector('p');
+      if (helpText) {
+        helpText.textContent = isFormValid ? 
+          'Click to download a PDF copy of your submission' : 
+          'Fill out the form to enable PDF download';
       }
     }
   }
 
-  return errors;
-};
-
-// PDF generation function
-const generateContactFormPDF = (formData, timestamp) => {
-  return new Promise((resolve, reject) => {
-    try {
-      const { name, email, message, company, interest } = formData;
-
-      // Using pdfmake with printer for consistency
-
-      const currentDate = new Date().toLocaleString('en-US', {
-        weekday: 'long',
-        year: 'numeric',
-        month: 'long',
-        day: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit',
-        timeZoneName: 'short',
-      });
-
-      const docDefinition = {
-        pageSize: 'A4',
-        pageMargins: [40, 60, 40, 60],
-        content: [
-          {
-            columns: [
-              {
-                width: '*',
-                stack: [
-                  { text: 'VISHNOREX', style: 'companyName', alignment: 'left' },
-                  { text: 'Custom Software Solutions', style: 'tagline', alignment: 'left' },
-                ],
-              },
-              {
-                width: 'auto',
-                stack: [
-                  { text: 'CONTACT FORM SUBMISSION', style: 'documentTitle', alignment: 'right' },
-                  { text: currentDate, style: 'dateText', alignment: 'right' },
-                ],
-              },
-            ],
-            margin: [0, 0, 0, 30],
-          },
-          // Submission Details
-          { text: 'SUBMISSION DETAILS', style: 'sectionHeader' },
-          {
-            table: {
-              widths: ['30%', '70%'],
-              body: [
-                [{ text: 'Submission ID:', style: 'labelText' }, { text: timestamp.toString(), style: 'valueText' }],
-                [{ text: 'Date & Time:', style: 'labelText' }, { text: currentDate, style: 'valueText' }],
-              ],
-            },
-            layout: 'noBorders',
-            margin: [0, 10, 0, 20],
-          },
-          // Contact Info
-          { text: 'CONTACT INFORMATION', style: 'sectionHeader' },
-          {
-            table: {
-              widths: ['30%', '70%'],
-              body: [
-                [{ text: 'Full Name:', style: 'labelText' }, { text: name, style: 'valueText' }],
-                [{ text: 'Email Address:', style: 'labelText' }, { text: email, style: 'valueText' }],
-                ...(company ? [[{ text: 'Company:', style: 'labelText' }, { text: company, style: 'valueText' }]] : []),
-                ...(interest ? [[{ text: 'Service Interest:', style: 'labelText' }, { text: interest, style: 'valueText' }]] : []),
-              ],
-            },
-            layout: 'noBorders',
-            margin: [0, 10, 0, 20],
-          },
-          // Message
-          { text: 'MESSAGE', style: 'sectionHeader' },
-          { text: message, style: 'messageText', margin: [0, 10, 0, 20] },
-          // Footer note
-          {
-            text: [
-              'This document was automatically generated by the Vishnorex contact form system on ',
-              { text: currentDate, italics: true },
-              '. For inquiries regarding this submission, please contact the sender directly using the provided email address.',
-            ],
-            style: 'footerText',
-            margin: [0, 30, 0, 0],
-          },
-        ],
-        styles: {
-          companyName: { fontSize: 24, bold: true, color: '#162A80' },
-          tagline: { fontSize: 10, color: '#666666', margin: [0, 2, 0, 0] },
-          documentTitle: { fontSize: 14, bold: true, color: '#162A80' },
-          dateText: { fontSize: 10, color: '#666666', margin: [0, 2, 0, 0] },
-          sectionHeader: { fontSize: 14, bold: true, color: '#162A80', margin: [0, 20, 0, 10] },
-          labelText: { fontSize: 11, bold: true, color: '#4a5568', margin: [0, 5, 0, 5] },
-          valueText: { fontSize: 11, color: '#2d3748', margin: [0, 5, 0, 5] },
-          messageText: { fontSize: 11, color: '#2d3748', lineHeight: 1.4, alignment: 'justify' },
-          footerText: { fontSize: 9, color: '#666666', alignment: 'center', lineHeight: 1.3 },
-        },
+  // Generate client-side PDF using jsPDF
+  function generateClientPDF(formData) {
+    // Load jsPDF library dynamically if not already loaded
+    if (typeof jsPDF === 'undefined') {
+      const script = document.createElement('script');
+      script.src = 'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js';
+      script.onload = () => {
+        // Once loaded, call the function again
+        generateClientPDF(formData);
       };
-
-      const pdfDoc = printer.createPdfKitDocument(docDefinition);
-      const chunks = [];
-
-      pdfDoc.on('data', (chunk) => {
-        chunks.push(chunk);
-      });
-
-      pdfDoc.on('end', () => {
-        const pdfBuffer = Buffer.concat(chunks);
-        resolve(pdfBuffer);
-      });
-
-      pdfDoc.on('error', (error) => {
-        reject(error);
-      });
-
-      pdfDoc.end();
-    } catch (error) {
-      reject(error);
-    }
-  });
-};
-
-// Contact form submission route
-app.post(['/contact', '/submit-contact'], async (req, res) => {
-  console.log('Contact form submission received:', req.body);
-
-  // Ensure we always send a JSON response
-  let responseSent = false;
-  const sendResponse = (statusCode, data) => {
-    if (!responseSent) {
-      responseSent = true;
-      res.status(statusCode).json(data);
-    }
-  };
-
-  try {
-    // Sanitize inputs
-    const sanitizedData = {
-      name: sanitizeInput(req.body.name),
-      email: sanitizeInput(req.body.email),
-      message: sanitizeInput(req.body.message),
-      company: sanitizeInput(req.body.company),
-      interest: sanitizeInput(req.body.interest),
-    };
-
-    // Validation
-    const validationErrors = validateFormData(sanitizedData);
-    if (validationErrors.length > 0) {
-      return sendResponse(400, { success: false, message: validationErrors.join('. '), errors: validationErrors });
+      document.head.appendChild(script);
+      return;
     }
 
-    const { name, email, message, company, interest } = sanitizedData;
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF();
 
-    // Prepare email transport configuration
-    const emailUser = process.env.EMAIL_USER || 'your-email@gmail.com';
-    const emailPass = process.env.EMAIL_PASS || 'your-app-password';
-
-    let transporterConfig;
-    if (emailUser.includes('@gmail.com')) {
-      transporterConfig = {
-        service: 'gmail',
-        host: 'smtp.gmail.com',
-        port: 587,
-        secure: false,
-        auth: { user: emailUser, pass: emailPass },
-      };
-    } else if (
-      emailUser.includes('@outlook.com') ||
-      emailUser.includes('@hotmail.com') ||
-      emailUser.includes('@live.com')
-    ) {
-      transporterConfig = {
-        service: 'hotmail',
-        host: 'smtp-mail.outlook.com',
-        port: 587,
-        secure: false,
-        auth: { user: emailUser, pass: emailPass },
-      };
-    } else if (process.env.SMTP_HOST) {
-      transporterConfig = {
-        host: process.env.SMTP_HOST,
-        port: parseInt(process.env.SMTP_PORT) || 587,
-        secure: process.env.SMTP_SECURE === 'true',
-        auth: { user: emailUser, pass: emailPass },
-      };
-    } else {
-      transporterConfig = {
-        service: 'gmail',
-        host: 'smtp.gmail.com',
-        port: 587,
-        secure: false,
-        auth: { user: emailUser, pass: emailPass },
-      };
-    }
-
-    const transporter = nodemailer.createTransport(transporterConfig);
-
-    // Unique submission timestamp
     const timestamp = Date.now();
-
-    // Current date string for email HTML body
     const currentDate = new Date().toLocaleString('en-US', {
       weekday: 'long',
       year: 'numeric',
@@ -361,283 +214,210 @@ app.post(['/contact', '/submit-contact'], async (req, res) => {
       timeZoneName: 'short',
     });
 
-    // Generate PDF buffer
-    console.log('Generating PDF attachment...');
-    const pdfBuffer = await generateContactFormPDF(sanitizedData, timestamp);
-    console.log('PDF generated successfully, size:', pdfBuffer.length, 'bytes');
+    // Add logo or title
+    doc.setFontSize(24);
+    doc.setTextColor(22, 42, 128); // #162A80
+    doc.text('VISHNOREX', 20, 30);
+    doc.setFontSize(10);
+    doc.setTextColor(102, 102, 102);
+    doc.text('Custom Software Solutions', 20, 36);
 
-    // Compose email with all details inside the body and PDF attached
-    const mailOptions = {
-      from: `"Vishnorex Contact Form" <${emailUser}>`,
-      to: process.env.ADMIN_EMAIL || 'recipient@example.com',
-      subject: `🔔 New Contact Form Submission - ${name} (${interest || 'General Inquiry'})`,
-      html: `
-        <h2>🔔 New Contact Form Submission</h2>
-        <p><strong>Date & Time:</strong> ${currentDate}</p>
+    // Document title and date
+    doc.setFontSize(14);
+    doc.setTextColor(22, 42, 128);
+    doc.text('CONTACT FORM SUBMISSION', 160, 30, { align: 'right' });
+    doc.setFontSize(10);
+    doc.setTextColor(102, 102, 102);
+    doc.text(currentDate, 160, 36, { align: 'right' });
 
-        <h3>Contact Details:</h3>
-        <table cellpadding="6" border="0">
-          <tr>
-            <td><strong>Full Name</strong></td>
-            <td>${name}</td>
-          </tr>
-          <tr>
-            <td><strong>Email</strong></td>
-            <td>${email}</td>
-          </tr>
-          ${company ? `<tr><td><strong>Company</strong></td><td>${company}</td></tr>` : ''}
-          ${interest ? `<tr><td><strong>Service Interest</strong></td><td>${interest}</td></tr>` : ''}
-        </table>
+    // Submission details
+    doc.setFontSize(14);
+    doc.setTextColor(22, 42, 128);
+    doc.text('SUBMISSION DETAILS', 20, 50);
+    doc.setFontSize(11);
+    doc.setTextColor(74, 85, 104);
+    doc.text('Submission ID:', 20, 60);
+    doc.setTextColor(45, 55, 72);
+    doc.text(timestamp.toString(), 60, 60);
+    doc.setTextColor(74, 85, 104);
+    doc.text('Date & Time:', 20, 66);
+    doc.setTextColor(45, 55, 72);
+    doc.text(currentDate, 60, 66);
 
-        <h3>Message:</h3>
-        <div style="background:#f9f9f9;border:1px solid #eee;padding:12px;margin-bottom:16px;">
-          ${message.replace(/\n/g, '<br>')}
-        </div>
-
-        <p>A PDF copy of this submission is attached for your records.</p>
-
-        <hr>
-        <p style="font-size:12px;color:#888;">
-          This message was automatically generated by the Vishnorex contact form system.
-        </p>
-      `,
-      attachments: [
-        {
-          filename: `ContactForm-${name.replace(/\s/g, '_')}-${timestamp}.pdf`,
-          content: pdfBuffer,
-          contentType: 'application/pdf',
-        },
-      ],
-    };
-
-    // Send email
-    try {
-      const info = await transporter.sendMail(mailOptions);
-      console.log('Contact form email sent:', info.response);
-      sendResponse(200, { success: true, message: 'Contact form submitted successfully' });
-    } catch (emailError) {
-      console.error('Error sending contact form email:', emailError);
-      sendResponse(500, { success: false, message: 'Failed to send email' });
+    // Contact information
+    doc.setFontSize(14);
+    doc.setTextColor(22, 42, 128);
+    doc.text('CONTACT INFORMATION', 20, 80);
+    
+    doc.setFontSize(11);
+    doc.setTextColor(74, 85, 104);
+    doc.text('Full Name:', 20, 90);
+    doc.setTextColor(45, 55, 72);
+    doc.text(formData.name, 60, 90);
+    
+    doc.setTextColor(74, 85, 104);
+    doc.text('Email Address:', 20, 96);
+    doc.setTextColor(45, 55, 72);
+    doc.text(formData.email, 60, 96);
+    
+    if (formData.company) {
+      doc.setTextColor(74, 85, 104);
+      doc.text('Company:', 20, 102);
+      doc.setTextColor(45, 55, 72);
+      doc.text(formData.company, 60, 102);
     }
-  } catch (error) {
-    console.error('Error handling contact form submission:', error);
-    sendResponse(500, { success: false, message: 'Server error processing submission' });
+    
+    if (formData.interest) {
+      doc.setTextColor(74, 85, 104);
+      doc.text('Service Interest:', 20, 108);
+      doc.setTextColor(45, 55, 72);
+      doc.text(formData.interest, 60, 108);
+    }
+
+    // Message
+    doc.setFontSize(14);
+    doc.setTextColor(22, 42, 128);
+    doc.text('MESSAGE', 20, 122);
+    
+    doc.setFontSize(11);
+    doc.setTextColor(45, 55, 72);
+    const messageLines = doc.splitTextToSize(formData.message, 170);
+    doc.text(messageLines, 20, 132);
+
+    // Footer
+    doc.setFontSize(9);
+    doc.setTextColor(102, 102, 102);
+    doc.text('This document was automatically generated by the Vishnorex contact form system.', 105, 280, { align: 'center' });
+    doc.text('For inquiries regarding this submission, please contact the sender directly using the provided email address.', 105, 285, { align: 'center' });
+
+    // Save the PDF
+    doc.save(`Vishnorex_Contact_Form_${timestamp}.pdf`);
   }
-});
 
-// PDF Download endpoint
-app.post('/download-pdf', rateLimit, (req, res) => {
-  console.log('PDF download request received:', req.body);
-
-  // Sanitize input data
-  const sanitizedData = {
-    name: sanitizeInput(req.body.name),
-    email: sanitizeInput(req.body.email),
-    message: sanitizeInput(req.body.message),
-    company: sanitizeInput(req.body.company),
-    interest: sanitizeInput(req.body.interest)
-  };
-
-  const { name, email, message, company, interest } = sanitizedData;
-
-  // Enhanced validation
-  const validationErrors = validateFormData(sanitizedData);
-  if (validationErrors.length > 0) {
-    return res.status(400).json({
-      success: false,
-      message: validationErrors.join('. '),
-      errors: validationErrors
+  // Handle form submission
+  if (contactForm) {
+    // Add input listeners for PDF button state
+    const formFields = contactForm.querySelectorAll('input, textarea, select');
+    formFields.forEach(field => {
+      field.addEventListener('input', updatePdfDownloadButton);
+      field.addEventListener('change', updatePdfDownloadButton);
     });
-  }
 
-  // Generate unique filename for PDF
-  const timestamp = Date.now();
-  const pdfFilename = `contact-form-preview-${timestamp}.pdf`;
+    contactForm.addEventListener('submit', async function(e) {
+      e.preventDefault();
 
-  // Generate PDF with enhanced formatting (same as email PDF)
-  const docDefinition = {
-    pageSize: 'A4',
-    pageMargins: [50, 70, 50, 70],
-    content: [
-      // Header with company branding
-      {
-        columns: [
-          {
-            text: 'VISHNOREX',
-            style: 'companyName',
-            width: '*'
+      const submitButton = contactForm.querySelector('button[type="submit"]');
+      const originalButtonText = submitButton.textContent;
+
+      // Get form data
+      const formData = {
+        name: sanitizeInput(contactForm.querySelector('[name="name"]').value),
+        email: sanitizeInput(contactForm.querySelector('[name="email"]').value),
+        message: sanitizeInput(contactForm.querySelector('[name="message"]').value),
+        company: sanitizeInput(contactForm.querySelector('[name="company"]').value),
+        interest: sanitizeInput(contactForm.querySelector('[name="interest"]').value)
+      };
+
+      // Validate form data
+      const validationErrors = validateFormData(formData);
+      if (validationErrors.length > 0) {
+        showNotification(validationErrors.join('. '), 'error');
+        return;
+      }
+
+      // Show loading state
+      submitButton.innerHTML = `
+        <svg class="animate-spin -ml-1 mr-3 h-5 w-5 text-white inline" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+          <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+          <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+        </svg>
+        Sending...
+      `;
+      submitButton.disabled = true;
+
+      try {
+        // Send data to server
+        const response = await fetch('/submit-contact', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
           },
-          {
-            text: `Preview ID: ${timestamp}`,
-            style: 'submissionId',
-            alignment: 'right',
-            width: 'auto'
-          }
-        ],
-        margin: [0, 0, 0, 20]
-      },
+          body: JSON.stringify(formData)
+        });
 
-      // Title
-      {
-        text: 'Contact Form Preview',
-        style: 'header',
-        alignment: 'center',
-        margin: [0, 0, 0, 10]
-      },
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
 
-      // Generation date
-      {
-        text: `Generated on: ${new Date().toLocaleString('en-US', {
-          weekday: 'long',
-          year: 'numeric',
-          month: 'long',
-          day: 'numeric',
-          hour: '2-digit',
-          minute: '2-digit',
-          timeZoneName: 'short'
-        })}`,
-        style: 'subheader',
-        alignment: 'center',
-        margin: [0, 0, 0, 30]
-      },
-
-      // Contact Information Section
-      {
-        text: 'Contact Information',
-        style: 'sectionHeader',
-        margin: [0, 0, 0, 15]
-      },
-      {
-        table: {
-          widths: ['25%', '75%'],
-          body: [
-            [
-              { text: 'Full Name:', style: 'fieldLabel' },
-              { text: name || 'Not provided', style: 'fieldValue' }
-            ],
-            [
-              { text: 'Email Address:', style: 'fieldLabel' },
-              { text: email || 'Not provided', style: 'fieldValue' }
-            ],
-            [
-              { text: 'Company:', style: 'fieldLabel' },
-              { text: company || 'Not provided', style: 'fieldValue' }
-            ],
-            [
-              { text: 'Service Interest:', style: 'fieldLabel' },
-              { text: interest || 'Not specified', style: 'fieldValue' }
-            ]
-          ]
-        },
-        layout: 'lightHorizontalLines',
-        margin: [0, 0, 0, 25]
-      },
-
-      // Message Section
-      {
-        text: 'Message',
-        style: 'sectionHeader',
-        margin: [0, 0, 0, 15]
-      },
-      {
-        table: {
-          widths: ['100%'],
-          body: [
-            [{
-              text: message || 'No message provided',
-              style: 'messageText',
-              margin: [10, 10, 10, 10]
-            }]
-          ]
-        },
-        layout: 'noBorders',
-        margin: [0, 0, 0, 30]
-      },
-
-      // Footer
-      {
-        text: 'This is a preview document generated from the Vishnorex contact form. This is not a submitted form.',
-        style: 'footer',
-        alignment: 'center'
+        const result = await response.json();
+        
+        if (result.success) {
+          showNotification('🎉 Thank you! Your message has been sent successfully. We\'ll get back to you soon.', 'success');
+          contactForm.reset();
+        } else {
+          showNotification(result.message || 'There was an error sending your message. Please try again.', 'error');
+        }
+      } catch (error) {
+        console.error('Error submitting form:', error);
+        if (error.name === 'TypeError' && error.message.includes('fetch')) {
+          showNotification('Network error. Please check your connection and try again.', 'error');
+        } else {
+          showNotification('There was an error sending your message. Please try again later.', 'error');
+        }
+      } finally {
+        // Reset button state
+        submitButton.innerHTML = originalButtonText;
+        submitButton.disabled = false;
+        updatePdfDownloadButton();
       }
-    ],
-    styles: {
-      companyName: {
-        fontSize: 16,
-        bold: true,
-        color: '#162A80',
-        letterSpacing: 2
-      },
-      submissionId: {
-        fontSize: 10,
-        color: '#6b7280',
-        italics: true
-      },
-      header: {
-        fontSize: 24,
-        bold: true,
-        color: '#162A80',
-        decoration: 'underline'
-      },
-      subheader: {
-        fontSize: 12,
-        color: '#6b7280',
-        italics: true
-      },
-      sectionHeader: {
-        fontSize: 16,
-        bold: true,
-        color: '#1e40af',
-        decoration: 'underline'
-      },
-      fieldLabel: {
-        fontSize: 12,
-        bold: true,
-        color: '#374151'
-      },
-      fieldValue: {
-        fontSize: 12,
-        color: '#111827'
-      },
-      messageText: {
-        fontSize: 11,
-        color: '#111827',
-        lineHeight: 1.4
-      },
-      footer: {
-        fontSize: 9,
-        color: '#9ca3af',
-        italics: true
-      }
-    }
-  };
-
-  try {
-    const pdfDoc = printer.createPdfKitDocument(docDefinition);
-
-    // Set response headers for PDF download
-    res.setHeader('Content-Type', 'application/pdf');
-    res.setHeader('Content-Disposition', `attachment; filename="${pdfFilename}"`);
-
-    // Pipe the PDF directly to the response
-    pdfDoc.pipe(res);
-    pdfDoc.end();
-
-    console.log('PDF download completed successfully');
-
-  } catch (error) {
-    console.log('Error generating PDF for download:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Failed to generate PDF. Please try again.'
     });
   }
-});
 
-// Start the server
-const PORT = process.env.PORT || 3001;
-app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
-});
+  // Handle PDF download button
+  if (downloadPdfBtn) {
+    downloadPdfBtn.addEventListener('click', function() {
+      if (!contactForm) return;
+      
+      const formData = {
+        name: sanitizeInput(contactForm.querySelector('[name="name"]').value),
+        email: sanitizeInput(contactForm.querySelector('[name="email"]').value),
+        message: sanitizeInput(contactForm.querySelector('[name="message"]').value),
+        company: sanitizeInput(contactForm.querySelector('[name="company"]').value),
+        interest: sanitizeInput(contactForm.querySelector('[name="interest"]').value)
+      };
 
-app.use(express.static('.'));
+      // Validate form data
+      const validationErrors = validateFormData(formData);
+      if (validationErrors.length > 0) {
+        showNotification('Please fill out all required fields correctly before downloading PDF.', 'error');
+        return;
+      }
+
+      // Show loading state
+      const originalText = downloadPdfBtn.innerHTML;
+      downloadPdfBtn.innerHTML = `
+        <svg class="animate-spin -ml-1 mr-2 h-4 w-4 text-white inline" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+          <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+          <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+        </svg>
+        Generating PDF...
+      `;
+      downloadPdfBtn.disabled = true;
+
+      try {
+        generateClientPDF(formData);
+        showNotification('📄 PDF downloaded successfully!', 'success');
+      } catch (error) {
+        console.error('Error generating PDF:', error);
+        showNotification('Error generating PDF. Please try again.', 'error');
+      } finally {
+        // Reset button state
+        downloadPdfBtn.innerHTML = originalText;
+        updatePdfDownloadButton();
+      }
+    });
+  }
+
+  // Initialize PDF button state
+  updatePdfDownloadButton();
+});
