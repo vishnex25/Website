@@ -1058,7 +1058,12 @@
                 downloadPdfBtn.disabled = true;
 
                 try {
-                    const response = await fetch('/download-pdf', {
+                    // Use the same backend URL logic as the form submission
+                    const backendUrl = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+                        ? 'http://localhost:3001/download-pdf'
+                        : '/download-pdf';
+
+                    const response = await fetch(backendUrl, {
                         method: 'POST',
                         headers: {
                             'Content-Type': 'application/json',

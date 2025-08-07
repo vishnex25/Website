@@ -6,6 +6,18 @@ const path = require('path');
 
 const app = express();
 
+// PDF fonts configuration
+const fonts = {
+  Roboto: {
+    normal: 'Helvetica',
+    bold: 'Helvetica-Bold',
+    italics: 'Helvetica-Oblique',
+    bolditalics: 'Helvetica-BoldOblique'
+  }
+};
+
+const printer = new PdfPrinter(fonts);
+
 // Rate limiting storage (for demo - use Redis or DB in production)
 const rateLimitStore = new Map();
 const RATE_LIMIT_WINDOW = 15 * 60 * 1000; // 15 minutes
@@ -68,6 +80,17 @@ app.set('trust proxy', true);
 // Health check
 app.get('/health', (req, res) => {
   res.json({ status: 'OK', timestamp: new Date().toISOString() });
+});
+
+// Favicon endpoint - serve a simple SVG favicon
+app.get('/favicon.ico', (req, res) => {
+  const favicon = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+    <rect width="32" height="32" fill="#162A80"/>
+    <text x="16" y="22" font-family="Arial, sans-serif" font-size="18" font-weight="bold" text-anchor="middle" fill="white">V</text>
+  </svg>`;
+
+  res.setHeader('Content-Type', 'image/svg+xml');
+  res.send(favicon);
 });
 
 // Serve main page (assuming index.html exists)
@@ -136,16 +159,7 @@ const generateContactFormPDF = (formData, timestamp) => {
     try {
       const { name, email, message, company, interest } = formData;
 
-      const fonts = {
-        Roboto: {
-          normal: 'Helvetica',
-          bold: 'Helvetica-Bold',
-          italics: 'Helvetica-Oblique',
-          bolditalics: 'Helvetica-BoldOblique',
-        },
-      };
-
-      const printer = new PdfPrinter(fonts);
+      // Using pdfmake with printer for consistency
 
       const currentDate = new Date().toLocaleString('en-US', {
         weekday: 'long',
@@ -408,6 +422,237 @@ app.post(['/contact', '/submit-contact'], async (req, res) => {
   } catch (error) {
     console.error('Error handling contact form submission:', error);
     sendResponse(500, { success: false, message: 'Server error processing submission' });
+  }
+});
+
+// PDF Download endpoint
+app.post('/download-pdf', rateLimit, (req, res) => {
+  console.log('PDF download request received:', req.body);
+
+  // Sanitize input data
+  const sanitizedData = {
+    name: sanitizeInput(req.body.name),
+    email: sanitizeInput(req.body.email),
+    message: sanitizeInput(req.body.message),
+    company: sanitizeInput(req.body.company),
+    interest: sanitizeInput(req.body.interest)
+  };
+
+  const { name, email, message, company, interest } = sanitizedData;
+
+  // Enhanced validation
+  const validationErrors = validateFormData(sanitizedData);
+  if (validationErrors.length > 0) {
+    return res.status(400).json({
+      success: false,
+      message: validationErrors.join('. '),
+      errors: validationErrors
+    });
+  }
+
+  // Generate unique filename for PDF
+  const timestamp = Date.now();
+  const pdfFilename = `contact-form-preview-${timestamp}.pdf`;
+
+  // Generate PDF with enhanced formatting (same as email PDF)
+  const docDefinition = {
+    pageSize: 'A4',
+    pageMargins: [50, 70, 50, 70],
+    content: [
+      // Header with company branding
+      {
+        columns: [
+          {
+            text: 'VISHNOREX',
+            style: 'companyName',
+            width: '*'
+          },
+          {
+            text: `Preview ID: ${timestamp}`,
+            style: 'submissionId',
+            alignment: 'right',
+            width: 'auto'
+          }
+        ],
+        margin: [0, 0, 0, 20]
+      },
+
+      // Title
+      {
+        text: 'Contact Form Preview',
+        style: 'header',
+        alignment: 'center',
+        margin: [0, 0, 0, 10]
+      },
+
+      // Generation date
+      {
+        text: `Generated on: ${new Date().toLocaleString('en-US', {
+          weekday: 'long',
+          year: 'numeric',
+          month: 'long',
+          day: 'numeric',
+          hour: '2-digit',
+          minute: '2-digit',
+          timeZoneName: 'short'
+        })}`,
+        style: 'subheader',
+        alignment: 'center',
+        margin: [0, 0, 0, 30]
+      },
+
+      // Contact Information Section
+      {
+        text: 'Contact Information',
+        style: 'sectionHeader',
+        margin: [0, 0, 0, 15]
+      },
+      {
+        table: {
+          widths: ['25%', '75%'],
+          body: [
+            [
+              { text: 'Full Name:', style: 'fieldLabel' },
+              { text: name || 'Not provided', style: 'fieldValue' }
+            ],
+            [
+              { text: 'Email Address:', style: 'fieldLabel' },
+              { text: email || 'Not provided', style: 'fieldValue' }
+            ],
+            [
+              { text: 'Company:', style: 'fieldLabel' },
+              { text: company || 'Not provided', style: 'fieldValue' }
+            ],
+            [
+              { text: 'Service Interest:', style: 'fieldLabel' },
+              { text: interest || 'Not specified', style: 'fieldValue' }
+            ]
+          ]
+        },
+        layout: {
+          fillColor: function (rowIndex) {
+            return (rowIndex % 2 === 0) ? '#f8fafc' : null;
+          },
+          hLineWidth: function (i, node) {
+            return (i === 0 || i === node.table.body.length) ? 1 : 0.5;
+          },
+          vLineWidth: function (i, node) {
+            return (i === 0 || i === node.table.widths.length) ? 1 : 0.5;
+          },
+          hLineColor: function () {
+            return '#e2e8f0';
+          },
+          vLineColor: function () {
+            return '#e2e8f0';
+          }
+        },
+        margin: [0, 0, 0, 25]
+      },
+
+      // Message Section
+      {
+        text: 'Message',
+        style: 'sectionHeader',
+        margin: [0, 0, 0, 15]
+      },
+      {
+        table: {
+          widths: ['100%'],
+          body: [
+            [{
+              text: message || 'No message provided',
+              style: 'messageText',
+              margin: [10, 10, 10, 10]
+            }]
+          ]
+        },
+        layout: {
+          fillColor: '#f8fafc',
+          hLineWidth: 1,
+          vLineWidth: 1,
+          hLineColor: '#e2e8f0',
+          vLineColor: '#e2e8f0'
+        },
+        margin: [0, 0, 0, 30]
+      },
+
+      // Footer
+      {
+        text: 'This is a preview document generated from the Vishnorex contact form. This is not a submitted form.',
+        style: 'footer',
+        alignment: 'center'
+      }
+    ],
+    styles: {
+      companyName: {
+        fontSize: 16,
+        bold: true,
+        color: '#162A80',
+        letterSpacing: 2
+      },
+      submissionId: {
+        fontSize: 10,
+        color: '#6b7280',
+        italics: true
+      },
+      header: {
+        fontSize: 24,
+        bold: true,
+        color: '#162A80',
+        decoration: 'underline'
+      },
+      subheader: {
+        fontSize: 12,
+        color: '#6b7280',
+        italics: true
+      },
+      sectionHeader: {
+        fontSize: 16,
+        bold: true,
+        color: '#1e40af',
+        decoration: 'underline'
+      },
+      fieldLabel: {
+        fontSize: 12,
+        bold: true,
+        color: '#374151'
+      },
+      fieldValue: {
+        fontSize: 12,
+        color: '#111827'
+      },
+      messageText: {
+        fontSize: 11,
+        color: '#111827',
+        lineHeight: 1.4
+      },
+      footer: {
+        fontSize: 9,
+        color: '#9ca3af',
+        italics: true
+      }
+    }
+  };
+
+  try {
+    const pdfDoc = printer.createPdfKitDocument(docDefinition);
+
+    // Set response headers for PDF download
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `attachment; filename="${pdfFilename}"`);
+
+    // Pipe the PDF directly to the response
+    pdfDoc.pipe(res);
+    pdfDoc.end();
+
+    console.log('PDF download completed successfully');
+
+  } catch (error) {
+    console.log('Error generating PDF for download:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to generate PDF. Please try again.'
+    });
   }
 });
 
