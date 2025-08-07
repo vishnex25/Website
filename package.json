@@ -1,0 +1,39 @@
+{
+  "name": "vishnorex-website",
+  "version": "1.0.0",
+  "description": "Vishnorex website with contact form functionality",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "nodemon server.js",
+    "build": "tailwindcss -i ./src/input.css -o ./dist/output.css --watch"
+  },
+  "dependencies": {
+    "@tailwindcss/cli": "^4.1.11",
+    "cors": "^2.8.5",
+    "dotenv": "^16.6.1",
+    "express": "^4.18.2",
+    "node-fetch": "^2.7.0",
+    "nodemailer": "^6.10.1",
+    "pdfkit": "^0.13.0",
+    "pdfmake": "^0.2.20",
+    "tailwindcss": "^4.1.11"
+  },
+  "devDependencies": {
+    "@types/node": "^24.2.0",
+    "nodemon": "^3.0.2"
+  },
+  "midnightblue": {
+    "50": "#F2F3F8",
+    "100": "#D8DCEA",
+    "200": "#BEC4DC",
+    "300": "#A4ACCE",
+    "400": "#8B95C0",
+    "500": "#717DB1",
+    "600": "#5765A3",
+    "700": "#3D4E95",
+    "800": "#162A80",
+    "900": "#12236A",
+    "950": "#0B143E"
+  }
+}

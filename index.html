@@ -1,0 +1,1192 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vishnorex</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/ScrollTrigger.min.js"></script>
+    <style>
+        body {
+            color: #2E2E2E;
+            font-family: 'Inter', sans-serif;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+            background: linear-gradient(135deg, #f0f4ff, #e0e7ff, #c7d2fe, #fbcfe8);
+            background-size: 400% 400%;
+            animation: colorful-background 25s ease infinite;
+        }
+        @keyframes colorful-background {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+        .font-h { font-family: 'Montserrat', sans-serif; }
+        .bg-gradient-primary { background-image: linear-gradient(135deg, #4564ED, #162A80); }
+        .bg-gradient-preloader { background-image: linear-gradient(to bottom, #162A80, #5875F8); }
+        .text-accent { color: #FF7F3E; }
+        .bg-accent { background-color: #FF7F3E; }
+        .border-accent { border-color: #FF7F3E; }
+        .hover\:bg-accent:hover { background-color: #FF7F3E; }
+        .hover\:border-accent:hover { border-color: #FF7F3E; }
+        .nav-link {
+            position: relative;
+            transition: color 0.3s ease;
+        }
+        .nav-link::after {
+            content: '';
+            position: absolute;
+            width: 0;
+            height: 2px;
+            bottom: -4px;
+            left: 50%;
+            transform: translateX(-50%);
+            background-color: white;
+            transition: width 0.3s ease, background-color 0.3s ease;
+        }
+        .nav-link:hover::after, .nav-link.active::after {
+            width: 100%;
+        }
+        .service-card {
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+        .service-card:hover {
+            transform: translateY(-10px);
+            box-shadow: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);
+        }
+        .service-card .icon-container {
+            transition: transform 0.3s ease, background-color 0.3s ease;
+        }
+        .service-card:hover .icon-container {
+            transform: rotate(15deg);
+        }
+        .fade-in-up {
+            opacity: 0;
+            transform: translateY(30px);
+            transition: opacity 0.6s ease-out, transform 0.6s ease-out;
+        }
+        .fade-in-up.visible {
+            opacity: 1;
+            transform: translateY(0);
+        }
+        #hero {
+            background-image: url('https://images.unsplash.com/photo-1451187580459-43490279c0fa?ixlib=rb-4.0.3&auto=format&fit=crop&w=2072&q=80');
+            background-size: cover;
+            background-position: center;
+            background-attachment: fixed;
+        }
+        
+        /* Mobile optimizations */
+        @media (max-width: 768px) {
+            #hero {
+                min-height: 100vh;
+                padding: 1rem 0;
+                position: relative;
+                /* Remove default background on mobile */
+                background-image: none !important;
+            }
+            
+            /* Fixed background container for mobile */
+            .mobile-bg-fixed {
+                position: fixed !important;
+                top: 0;
+                left: 0;
+                width: 100vw;
+                height: 100vh;
+                background-image: url('https://images.unsplash.com/photo-1451187580459-43490279c0fa?ixlib=rb-4.0.3&auto=format&fit=crop&w=2072&q=80');
+                background-size: cover;
+                background-position: center center;
+                background-repeat: no-repeat;
+                z-index: -10;
+                pointer-events: none;
+            }
+            
+            .service-card {
+                margin-bottom: 1rem;
+            }
+            
+            .service-card:hover {
+                transform: translateY(-5px);
+            }
+            
+            .testimonial-card {
+                min-height: auto;
+            }
+            
+            #testimonial-slider-container {
+                min-height: 600px;
+            }
+            
+            .container {
+                padding-left: 1rem;
+                padding-right: 1rem;
+            }
+            
+            /* Better mobile navigation */
+            #mobile-menu {
+                backdrop-filter: blur(10px);
+            }
+            
+            /* Improved form spacing on mobile */
+            .form-input, .form-select, .form-textarea {
+                padding: 0.875rem 1rem;
+                font-size: 1rem;
+            }
+            
+            /* Mobile background colors for sections - match desktop gradient */
+            #services {
+                background: linear-gradient(135deg, #f0f4ff, #e0e7ff, #c7d2fe, #fbcfe8);
+                background-size: 400% 400%;
+                animation: colorful-background 25s ease infinite;
+                position: relative;
+            }
+            
+            #case-studies {
+                background: linear-gradient(135deg, #f0f4ff, #e0e7ff, #c7d2fe, #fbcfe8);
+                background-size: 400% 400%;
+                animation: colorful-background 25s ease infinite;
+                position: relative;
+            }
+        }
+        
+        /* Tablet optimizations */
+        @media (min-width: 768px) and (max-width: 1024px) {
+            .service-card {
+                min-height: 280px;
+            }
+            
+            #testimonial-slider-container {
+                min-height: 500px;
+            }
+            
+            /* Maintain same gradient backgrounds on tablet - match desktop */
+            #services {
+                background: linear-gradient(135deg, #f0f4ff, #e0e7ff, #c7d2fe, #fbcfe8);
+                background-size: 400% 400%;
+                animation: colorful-background 25s ease infinite;
+                position: relative;
+            }
+            
+            #case-studies {
+                background: linear-gradient(135deg, #f0f4ff, #e0e7ff, #c7d2fe, #fbcfe8);
+                background-size: 400% 400%;
+                animation: colorful-background 25s ease infinite;
+                position: relative;
+            }
+        }
+        
+        /* Large screen optimizations */
+        @media (min-width: 1024px) {
+            .service-card {
+                min-height: 320px;
+            }
+            
+            /* Reset backgrounds on desktop to maintain original design */
+            #services,
+            #case-studies {
+                background: none !important;
+                position: static;
+            }
+            
+            #services::before,
+            #case-studies::before {
+                display: none;
+            }
+        }
+        .hero-text-shadow {
+            text-shadow: 0 2px 8px rgba(0, 0, 0, 0.7);
+        }
+        #testimonial-slider-container {
+            position: relative;
+            min-height: 800px;
+            perspective: 1500px;
+        }
+        @media (min-width: 1024px) {
+            #testimonial-slider-container {
+                min-height: 520px;
+            }
+        }
+        .testimonial-card {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            transform-style: preserve-3d;
+            backface-visibility: hidden;
+            transition: transform 1s ease-in-out;
+            transform: rotateX(180deg);
+            pointer-events: none;
+        }
+        .testimonial-card.is-active {
+            transform: rotateX(0deg);
+            pointer-events: auto;
+            z-index: 1;
+        }
+        .form-input, .form-select, .form-textarea {
+            background-color: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            color: white;
+            transition: background-color 0.3s, border-color 0.3s;
+        }
+        .form-input::placeholder, .form-textarea::placeholder {
+            color: rgba(255, 255, 255, 0.6);
+        }
+        .form-input:focus, .form-select:focus, .form-textarea:focus {
+            background-color: rgba(255, 255, 255, 0.2);
+            border-color: #FF7F3E;
+            outline: none;
+        }
+        .form-select {
+            -webkit-appearance: none;
+            -moz-appearance: none;
+            appearance: none;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%23ffffff' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-position: right 1rem center;
+        }
+        .form-select option {
+            color: #2E2E2E;
+        }
+        .header-scrolled {
+            background-color: white;
+            box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+        }
+        .header-scrolled .nav-link, .header-scrolled #mobile-menu-button {
+            color: #162A80;
+        }
+        .header-scrolled .nav-link::after {
+            background-color: #4564ED;
+        }
+        .header-scrolled #consult-button {
+            color: #162A80;
+            border-color: #162A80;
+        }
+        .header-scrolled #consult-button:hover {
+            background-color: #162A80;
+            color: white;
+        }
+        #main-header:not(.header-scrolled) .nav-link,
+        #main-header:not(.header-scrolled) #mobile-menu-button {
+            color: white;
+        }
+        #insights-slider-container {
+            position: relative;
+            min-height: 480px;
+            perspective: 1000px;
+            overflow: hidden;
+        }
+        .insight-card {
+            /* Remove slider styles for static grid */
+            position: static;
+            width: 100%;
+            height: auto;
+            opacity: 1;
+            pointer-events: auto;
+        }
+    </style>
+</head>
+<body class="overflow-x-hidden">
+
+    <!-- <div id="preloader" class="fixed inset-0 bg-gradient-preloader z-[100] flex items-center justify-center">
+        <img src="./assests/whitebg.png" alt="Vishnorex Logo" class="h-20">
+    </div> -->
+
+    <header id="main-header" class="fixed top-0 left-0 w-full z-50 transition-all duration-300">
+        <div class="container mx-auto px-4 sm:px-6 py-3 sm:py-4">
+            <div class="flex justify-between items-center">
+                <a href="#hero" class="flex-shrink-0">
+                    <img src="./assests/whitebg.png" alt="Vishnorex Logo White" class="h-8 sm:h-10 md:h-12 transition-all duration-300 logo-white">
+                    <img src="./assests/nobg.png" alt="Vishnorex Logo Color" class="h-8 sm:h-10 md:h-12 transition-all duration-300 logo-color hidden">
+                </a>
+                <nav class="hidden lg:flex items-center space-x-6 xl:space-x-8">
+                    <a href="#services" class="nav-link font-medium text-sm xl:text-base">Services</a>
+                    <a href="#about" class="nav-link font-medium text-sm xl:text-base">About</a>
+                    <a href="#case-studies" class="nav-link font-medium text-sm xl:text-base">Case Studies</a>
+                    <a href="#insights" class="nav-link font-medium text-sm xl:text-base">Insights</a>
+                </nav>
+                <div class="flex items-center">
+                    <a href="#contact" id="consult-button" class="hidden lg:inline-block bg-transparent text-white font-semibold px-4 xl:px-6 py-2 xl:py-3 rounded-lg shadow-lg transition-all duration-300 border-2 border-white hover:bg-white hover:text-blue-900 text-sm xl:text-base">
+                        Schedule a Consultation
+                    </a>
+                    <button id="mobile-menu-button" class="lg:hidden text-white text-2xl sm:text-3xl ml-2 sm:ml-4 focus:outline-none p-2">
+                        &#9776;
+                    </button>
+                </div>
+            </div>
+        </div>
+    </header>
+    
+    <div id="mobile-menu" class="hidden fixed inset-0 bg-gray-900 bg-opacity-95 z-50 p-6 sm:p-8 lg:hidden">
+        <div class="flex justify-end">
+             <button id="close-mobile-menu" class="text-white text-3xl sm:text-4xl focus:outline-none p-2">
+                &times;
+            </button>
+        </div>
+        <nav class="flex flex-col items-center justify-center h-full space-y-6 sm:space-y-8">
+            <a href="#services" class="nav-link text-white text-xl sm:text-2xl font-medium">Services</a>
+            <a href="#about" class="nav-link text-white text-xl sm:text-2xl font-medium">About</a>
+            <a href="#case-studies" class="nav-link text-white text-xl sm:text-2xl font-medium">Case Studies</a>
+            <a href="#insights" class="nav-link text-white text-xl sm:text-2xl font-medium">Insights</a>
+            <a href="#contact" class="mt-6 sm:mt-8 bg-transparent text-white font-semibold px-6 sm:px-8 py-3 sm:py-4 rounded-lg shadow-lg transition-all duration-300 border-2 border-white hover:bg-white hover:text-blue-900 text-base sm:text-lg">
+                Schedule a Consultation
+            </a>
+        </nav>
+    </div>
+
+    <main>
+        <section id="hero" class="relative min-h-screen flex items-center text-white overflow-hidden">
+            <div class="container mx-auto px-6 text-center relative z-10">
+                <h1 class="font-h text-3xl sm:text-4xl md:text-6xl lg:text-7xl font-bold tracking-tight leading-tight mb-6 animate-fade-in-up hero-text-shadow px-4">
+                    Custom Software Solutions to Help Your Business Succeed
+                </h1>
+                <p class="text-base sm:text-lg md:text-xl max-w-3xl mx-auto text-gray-200 mb-8 animate-fade-in-up hero-text-shadow px-4" style="animation-delay: 0.3s;">
+                    Transforming ideas into high-impact software
+                </p>
+                <div class="animate-fade-in-up" style="animation-delay: 0.6s;">
+                    <a href="#services" class="bg-transparent text-white font-semibold px-8 py-4 rounded-lg shadow-lg text-lg inline-block transition-all duration-300 border-2 border-white hover:bg-white hover:text-blue-900">
+                        Explore Our Services
+                    </a>
+                </div>
+            </div>
+        </section>
+
+        <section id="services" class="py-16 sm:py-20 md:py-32">
+            <div class="container mx-auto px-4 sm:px-6">
+                <div class="text-center mb-12 sm:mb-16">
+                    <h2 class="font-h text-3xl sm:text-4xl md:text-5xl font-bold mb-4 fade-in-up px-4">Our Core Capabilities</h2>
+                    <p class="text-base sm:text-lg text-slate-500 max-w-2xl mx-auto fade-in-up px-4">We provide end-to-end technology solutions designed to solve complex business challenges and create lasting value.</p>
+                </div>
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8">
+                    <div class="service-card bg-white p-6 sm:p-8 rounded-2xl shadow-sm fade-in-up">
+                        <div class="icon-container w-14 h-14 sm:w-16 sm:h-16 mb-4 sm:mb-6 rounded-xl bg-blue-100 flex items-center justify-center text-2xl sm:text-3xl text-blue-500">☁️</div>
+                        <h3 class="font-h text-xl sm:text-2xl font-semibold mb-3">Cloud & DevOps</h3>
+                        <p class="text-slate-500 text-sm sm:text-base">Architecting scalable, resilient, and cost-efficient cloud infrastructures with automated CI/CD pipelines for rapid innovation.</p>
+                    </div>
+                    <div class="service-card bg-white p-6 sm:p-8 rounded-2xl shadow-sm fade-in-up">
+                        <div class="icon-container w-14 h-14 sm:w-16 sm:h-16 mb-4 sm:mb-6 rounded-xl bg-green-100 flex items-center justify-center text-2xl sm:text-3xl text-green-500">🛡️</div>
+                        <h3 class="font-h text-xl sm:text-2xl font-semibold mb-3">Cybersecurity</h3>
+                        <p class="text-slate-500 text-sm sm:text-base">Implementing Zero Trust architectures and proactive threat intelligence to protect your most critical digital assets.</p>
+                    </div>
+                    <div class="service-card bg-white p-6 sm:p-8 rounded-2xl shadow-sm fade-in-up">
+                        <div class="icon-container w-14 h-14 sm:w-16 sm:h-16 mb-4 sm:mb-6 rounded-xl bg-purple-100 flex items-center justify-center text-2xl sm:text-3xl text-purple-500">💡</div>
+                        <h3 class="font-h text-xl sm:text-2xl font-semibold mb-3">AI & Machine Learning</h3>
+                        <p class="text-slate-500 text-sm sm:text-base">Leveraging AI to unlock predictive insights, automate processes, and create intelligent, data-driven products.</p>
+                    </div>
+                    <div class="service-card bg-white p-6 sm:p-8 rounded-2xl shadow-sm fade-in-up">
+                        <div class="icon-container w-14 h-14 sm:w-16 sm:h-16 mb-4 sm:mb-6 rounded-xl bg-red-100 flex items-center justify-center text-2xl sm:text-3xl text-red-500">⚙️</div>
+                        <h3 class="font-h text-xl sm:text-2xl font-semibold mb-3">Custom Software</h3>
+                        <p class="text-slate-500 text-sm sm:text-base">Engineering bespoke, high-performance software solutions tailored to your unique operational needs and business goals.</p>
+                    </div>
+                    <div class="service-card bg-white p-6 sm:p-8 rounded-2xl shadow-sm fade-in-up">
+                        <div class="icon-container w-14 h-14 sm:w-16 sm:h-16 mb-4 sm:mb-6 rounded-xl bg-yellow-100 flex items-center justify-center text-2xl sm:text-3xl text-yellow-500">📊</div>
+                        <h3 class="font-h text-xl sm:text-2xl font-semibold mb-3">Data & Analytics</h3>
+                        <p class="text-slate-500 text-sm sm:text-base">Transforming raw data into actionable business intelligence through modern data platforms and visualization.</p>
+                    </div>
+                    <div class="service-card bg-white p-6 sm:p-8 rounded-2xl shadow-sm fade-in-up">
+                        <div class="icon-container w-14 h-14 sm:w-16 sm:h-16 mb-4 sm:mb-6 rounded-xl bg-accent bg-opacity-20 flex items-center justify-center text-2xl sm:text-3xl text-accent">🤝</div>
+                        <h3 class="font-h text-xl sm:text-2xl font-semibold mb-3">IT Strategy Consulting</h3>
+                        <p class="text-slate-500 text-sm sm:text-base">Advising on technology roadmaps, digital transformation, and IT governance to align technology with your vision.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="about" class="py-16 sm:py-20 md:py-32 bg-white">
+            <div class="container mx-auto px-4 sm:px-6">
+                <div class="grid lg:grid-cols-2 gap-12 lg:gap-16 items-center">
+                    <div class="fade-in-up order-2 lg:order-1">
+                        <img src="https://images.unsplash.com/photo-1521737711867-e3b97375f902?ixlib=rb-4.0.3&auto=format&fit=crop&w=1287&q=80" alt="Vishnorex Team Collaboration" class="rounded-2xl shadow-xl w-full max-w-sm sm:max-w-md lg:max-w-md mx-auto" style="height:auto; max-height:320px; object-fit:cover;">
+                    </div>
+                    <div class="fade-in-up order-1 lg:order-2 text-center lg:text-left">
+                        <h2 class="font-h text-3xl sm:text-4xl md:text-5xl font-bold mb-6 px-4 lg:px-0">We are your strategic technology partner.</h2>
+                        <p class="text-base sm:text-lg text-slate-500 mb-6 px-4 lg:px-0">Vishnorex was founded on a simple principle: technology should be a catalyst for growth, not a constraint. We are a collective of expert engineers, visionary strategists, and creative problem-solvers dedicated to co-creating success with our clients. Our culture is built on a foundation of deep collaboration, radical transparency, and an relentless pursuit of excellence.</p>
+                        <div class="grid grid-cols-2 gap-6 sm:gap-8 text-center mt-8 sm:mt-10 px-4 lg:px-0">
+                            <div>
+                                <div class="font-h text-4xl sm:text-5xl font-bold text-accent" id="value-counter-1">10+</div>
+                                <p class="text-slate-500 mt-2 text-sm sm:text-base">Successful Projects</p>
+                            </div>
+                            <div>
+                                <div class="font-h text-4xl sm:text-5xl font-bold text-accent" id="value-counter-2">98%</div>
+                                <p class="text-slate-500 mt-2 text-sm sm:text-base">Client Satisfaction</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+        
+        <section id="case-studies" class="py-16 sm:py-20 md:py-32">
+            <div class="container mx-auto px-4 sm:px-6">
+                <div class="text-center mb-12 sm:mb-16">
+                    <h2 class="font-h text-3xl sm:text-4xl md:text-5xl font-bold mb-4 fade-in-up px-4">Proven Success in Action</h2>
+                    <p class="text-base sm:text-lg text-slate-500 max-w-2xl mx-auto fade-in-up px-4">We deliver measurable results. Explore how we've helped industry leaders overcome their toughest technology challenges.</p>
+                </div>
+
+                <div id="testimonial-slider-container">
+                    <div id="testimonial-slider">
+                        <div class="testimonial-card">
+                            <div class="bg-white rounded-2xl shadow-lg overflow-hidden lg:grid lg:grid-cols-12">
+                                <div class="lg:col-span-6">
+                                    <img src="https://images.unsplash.com/photo-1563013544-824ae1b704d3?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80" class="w-full h-48 sm:h-64 lg:h-full object-cover" alt="FinTech Security Project">
+                                </div>
+                                <div class="p-6 sm:p-8 lg:p-12 lg:col-span-6 flex flex-col justify-center">
+                                    <p class="text-xs sm:text-sm font-semibold text-accent uppercase tracking-wider mb-2">FinTech & Cybersecurity</p>
+                                    <h3 class="font-h text-2xl sm:text-3xl font-bold mb-4">Securing a Neo-Bank's Cloud Infrastructure</h3>
+                                    <p class="text-slate-500 mb-6 text-sm sm:text-base">Partnered with a leading digital bank to re-architect their AWS environment, implementing a Zero Trust security model that reduced intrusion alerts by 99.9% and achieved full PCI DSS 4.0 compliance 6 months ahead of schedule.</p>
+                                    <div class="mt-auto">
+                                        <a href="#" class="font-semibold text-accent hover:underline text-sm sm:text-base">Read Case Study →</a>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="testimonial-card">
+                            <div class="bg-white rounded-2xl shadow-lg overflow-hidden lg:grid lg:grid-cols-12">
+                                <div class="lg:col-span-6">
+                                    <img src="https://images.unsplash.com/photo-1559757148-5c350d0d3c56?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80" class="w-full h-48 sm:h-64 lg:h-full object-cover" alt="AI in Healthcare Project">
+                                </div>
+                                <div class="p-6 sm:p-8 lg:p-12 lg:col-span-6 flex flex-col justify-center">
+                                    <p class="text-xs sm:text-sm font-semibold text-accent uppercase tracking-wider mb-2">Healthcare & AI</p>
+                                    <h3 class="font-h text-2xl sm:text-3xl font-bold mb-4">AI-Powered Diagnostic Imaging Analysis</h3>
+                                    <p class="text-slate-500 mb-6 text-sm sm:text-base">Developed a custom machine learning model for a major healthcare provider to analyze medical images, improving diagnostic accuracy by 27% and reducing radiologist review time by an average of 40% per case.</p>
+                                    <div class="mt-auto">
+                                        <a href="#" class="font-semibold text-accent hover:underline text-sm sm:text-base">Read Case Study →</a>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="absolute -bottom-8 left-1/2 -translate-x-1/2 flex space-x-3 z-10">
+                        <button class="testimonial-dot active bg-accent w-3 h-3 rounded-full"></button>
+                        <button class="testimonial-dot bg-gray-300 w-3 h-3 rounded-full"></button>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="insights" class="py-16 sm:py-20 md:py-32 bg-white">
+            <div class="container mx-auto px-4 sm:px-6">
+                <div class="text-center mb-12 sm:mb-16">
+                    <h2 class="font-h text-3xl sm:text-4xl md:text-5xl font-bold mb-4 fade-in-up px-4">From Our Insights Hub</h2>
+                    <p class="text-base sm:text-lg text-slate-500 max-w-2xl mx-auto fade-in-up px-4">Explore our latest research, analysis, and perspectives on the future of technology in business.</p>
+                </div>
+                <div class="max-w-6xl mx-auto">
+                    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8">
+                        <div class="insight-card bg-white rounded-xl overflow-hidden shadow-md">
+                            <img src="https://images.unsplash.com/photo-1550751827-4bd374c3f58b?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&q=80" alt="AI Cybersecurity Threat Detection" class="w-full h-48 object-cover">
+                            <div class="p-6">
+                                <p class="text-sm text-slate-500 mb-2">Cybersecurity • Report</p>
+                                <h3 class="font-h text-xl font-semibold mb-3">The Future of AI in Real-Time Threat Detection</h3>
+                                <a href="#" class="font-semibold text-accent hover:underline">Read More →</a>
+                            </div>
+                        </div>
+                        <div class="insight-card bg-white rounded-xl overflow-hidden shadow-md">
+                            <img src="https://images.unsplash.com/photo-1451187580459-43490279c0fa?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&q=80" alt="Cloud Computing Infrastructure" class="w-full h-48 object-cover">
+                            <div class="p-6">
+                                <p class="text-sm text-slate-500 mb-2">Cloud Computing • Analysis</p>
+                                <h3 class="font-h text-xl font-semibold mb-3">Reindustrialization of Europe: A Cloud-Native Approach</h3>
+                                <a href="#" class="font-semibold text-accent hover:underline">Read More →</a>
+                            </div>
+                        </div>
+                        <div class="insight-card bg-white rounded-xl overflow-hidden shadow-md">
+                            <img src="https://images.unsplash.com/photo-1552664730-d307ca884978?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&q=80" alt="Digital Transformation Workforce" class="w-full h-48 object-cover">
+                            <div class="p-6">
+                                <p class="text-sm text-slate-500 mb-2">Digital Transformation • Perspective</p>
+                                <h3 class="font-h text-xl font-semibold mb-3">The Economics of Reinventing Work and the Workforce</h3>
+                                <a href="#" class="font-semibold text-accent hover:underline">Read More →</a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="contact" class="bg-gradient-primary text-white py-16 sm:py-20 md:py-32">
+            <div class="container mx-auto px-4 sm:px-6">
+                <div class="text-center mb-12">
+                       <h2 class="font-h text-3xl sm:text-4xl md:text-5xl font-bold mb-4 fade-in-up px-4">Let's Build Together</h2>
+                       <p class="text-base sm:text-lg text-gray-200 max-w-2xl mx-auto fade-in-up px-4">Have a project in mind or just want to learn more? We'd love to hear from you.</p>
+                </div>
+                <div class="max-w-4xl mx-auto fade-in-up">
+                    <form id="contact-form" action="/submit-contact" method="post">
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
+                            <div>
+                                <label for="full-name" class="block text-sm font-medium mb-2">Full Name</label>
+                                <input type="text" id="full-name" name="name" required class="form-input w-full px-4 py-3 rounded-lg" placeholder="John Doe">
+                            </div>
+                            <div>
+                                <label for="company-name" class="block text-sm font-medium mb-2">Company Name</label>
+                                <input type="text" id="company-name" name="company" class="form-input w-full px-4 py-3 rounded-lg" placeholder="Your Company Inc.">
+                            </div>
+                            <div>
+                                <label for="work-email" class="block text-sm font-medium mb-2">Work Email</label>
+                                <input type="email" id="work-email" name="email" required class="form-input w-full px-4 py-3 rounded-lg" placeholder="you@company.com">
+                            </div>
+                             <div>
+                                <label for="interest" class="block text-sm font-medium mb-2">How can we help?</label>
+                                <select id="interest" name="interest" required class="form-select w-full px-4 py-3 rounded-lg">
+                                    <option>Select a service...</option>
+                                    <option>Cloud & DevOps</option>
+                                    <option>Cybersecurity</option>
+                                    <option>AI & Machine Learning</option>
+                                    <option>Custom Software</option>
+                                    <option>Data & Analytics</option>
+                                    <option>IT Strategy Consulting</option>
+                                    <option>Other</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="mt-6">
+                            <label for="message" class="block text-sm font-medium mb-2">Message</label>
+                            <textarea id="message" name="message" rows="5" required class="form-textarea w-full px-4 py-3 rounded-lg" placeholder="Tell us about your project or inquiry..."></textarea>
+                        </div>
+                        <div class="mt-8 text-center space-y-4">
+                             <button type="submit" class="bg-accent text-white font-semibold px-10 py-4 rounded-lg shadow-lg text-lg inline-block transform hover:scale-105 transition-all duration-300">
+                                Send Message
+                            </button>
+                            <div class="text-center">
+                                <button type="button" id="download-pdf-btn" class="bg-transparent text-white font-medium px-6 py-2 rounded-lg border-2 border-white hover:bg-white hover:text-blue-900 transition-all duration-300 text-sm" disabled>
+                                    📄 Download PDF Copy
+                                </button>
+                                <p class="text-xs text-gray-300 mt-2">Fill out the form to enable PDF download</p>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <footer class="bg-[#101D42] text-gray-400 py-12 sm:py-16">
+        <div class="container mx-auto px-4 sm:px-6">
+            <!-- Mobile: 3 sections stacked vertically, Desktop: 4 columns -->
+            <div class="grid grid-cols-1 sm:grid-cols-3 lg:grid-cols-4 gap-8 sm:gap-12">
+                <!-- Company Info - Full width on mobile, spans 1 column on tablet, 1 column on desktop -->
+                <div class="sm:col-span-3 lg:col-span-1 text-center sm:text-left">
+                    <img src="./assests/whitebg.png" alt="Vishnorex Logo" class="h-10 sm:h-12 mb-4 mx-auto sm:mx-0">
+                    <p class="text-sm sm:text-base max-w-xs mx-auto sm:mx-0">Engineering Resilient Digital Futures.</p>
+                </div>
+                
+                <!-- Quick Links - First column on mobile/tablet -->
+                <div class="text-center sm:text-left">
+                    <h4 class="font-h text-base sm:text-lg font-semibold text-white mb-3 sm:mb-4">Quick Links</h4>
+                    <ul class="space-y-2 sm:space-y-3">
+                        <li><a href="#services" class="text-sm sm:text-base hover:text-white transition-colors">Services</a></li>
+                        <li><a href="#about" class="text-sm sm:text-base hover:text-white transition-colors">About Us</a></li>
+                        <li><a href="#case-studies" class="text-sm sm:text-base hover:text-white transition-colors">Case Studies</a></li>
+                        <li><a href="#insights" class="text-sm sm:text-base hover:text-white transition-colors">Insights</a></li>
+                    </ul>
+                </div>
+                
+                <!-- Legal - Second column on mobile/tablet -->
+                <div class="text-center sm:text-left">
+                    <h4 class="font-h text-base sm:text-lg font-semibold text-white mb-3 sm:mb-4">Legal</h4>
+                    <ul class="space-y-2 sm:space-y-3">
+                        <li><a href="#" class="text-sm sm:text-base hover:text-white transition-colors">Privacy Policy</a></li>
+                        <li><a href="#" class="text-sm sm:text-base hover:text-white transition-colors">Terms of Service</a></li>
+                        <li><a href="#" class="text-sm sm:text-base hover:text-white transition-colors">Cookie Policy</a></li>
+                    </ul>
+                </div>
+                
+                <!-- Connect - Third column on mobile/tablet -->
+                <div class="text-center sm:text-left">
+                    <h4 class="font-h text-base sm:text-lg font-semibold text-white mb-3 sm:mb-4">Connect</h4>
+                    <ul class="space-y-2 sm:space-y-3">
+                        <li><a href="#" class="text-sm sm:text-base hover:text-white transition-colors">LinkedIn</a></li>
+                        <li><a href="https://www.instagram.com/your_instagram_id" class="text-sm sm:text-base hover:text-white transition-colors">Instagram</a></li>
+                        <li><a href="#" class="text-sm sm:text-base hover:text-white transition-colors">Twitter</a></li>
+                    </ul>
+                </div>
+            </div>
+            
+            <!-- Copyright -->
+            <div class="mt-8 sm:mt-12 border-t border-gray-700 pt-6 sm:pt-8 text-center">
+                <p class="text-xs sm:text-sm">&copy; 2025 Vishnorex. All Rights Reserved.</p>
+            </div>
+        </div>
+    </footer>
+
+    <script>
+    document.addEventListener('DOMContentLoaded', function() {
+        gsap.registerPlugin(ScrollTrigger);
+        
+        // Create fixed background for mobile devices
+        function createMobileFixedBackground() {
+            if (window.innerWidth <= 768) {
+                // Remove any existing mobile background
+                const existingBg = document.querySelector('.mobile-bg-fixed');
+                if (existingBg) {
+                    existingBg.remove();
+                }
+                
+                // Create new fixed background element
+                const fixedBg = document.createElement('div');
+                fixedBg.className = 'mobile-bg-fixed';
+                
+                // Insert it at the beginning of body
+                document.body.insertBefore(fixedBg, document.body.firstChild);
+            } else {
+                // Remove mobile background on desktop
+                const mobileBg = document.querySelector('.mobile-bg-fixed');
+                if (mobileBg) {
+                    mobileBg.remove();
+                }
+            }
+        }
+        
+        // Initialize mobile background
+        createMobileFixedBackground();
+        
+        // Re-create on window resize
+        window.addEventListener('resize', createMobileFixedBackground);
+
+        const preloader = document.getElementById('preloader');
+        if (preloader) {
+            window.addEventListener('load', () => {
+                setTimeout(() => {
+                    preloader.style.opacity = '0';
+                    preloader.style.transition = 'opacity 0.5s ease';
+                    setTimeout(() => preloader.style.display = 'none', 100);
+                }, 500);
+            });
+        }
+
+        const header = document.getElementById('main-header');
+        const logoWhite = document.querySelector('.logo-white');
+        const logoColor = document.querySelector('.logo-color');
+        
+        if (header && logoWhite && logoColor) {
+            ScrollTrigger.create({
+                trigger: "#services",
+                start: "top top",
+                onEnter: () => {
+                    header.classList.add('header-scrolled');
+                    logoWhite.classList.add('hidden');
+                    logoColor.classList.remove('hidden');
+                },
+                onLeaveBack: () => {
+                    header.classList.remove('header-scrolled');
+                    logoWhite.classList.remove('hidden');
+                    logoColor.classList.add('hidden');
+                }
+            });
+        }
+
+        const mobileMenuButton = document.getElementById('mobile-menu-button');
+        const closeMobileMenuButton = document.getElementById('close-mobile-menu');
+        const mobileMenu = document.getElementById('mobile-menu');
+
+        if (mobileMenuButton && closeMobileMenuButton && mobileMenu) {
+            const mobileNavLinks = mobileMenu.querySelectorAll('a');
+
+            mobileMenuButton.addEventListener('click', () => {
+                mobileMenu.classList.remove('hidden');
+            });
+            closeMobileMenuButton.addEventListener('click', () => {
+                mobileMenu.classList.add('hidden');
+            });
+            mobileNavLinks.forEach(link => {
+                link.addEventListener('click', () => {
+                    mobileMenu.classList.add('hidden');
+                });
+            });
+        }
+
+        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+            anchor.addEventListener('click', function (e) {
+                e.preventDefault();
+                document.querySelector(this.getAttribute('href')).scrollIntoView({
+                    behavior: 'smooth'
+                });
+            });
+        });
+
+        const faders = document.querySelectorAll('.fade-in-up');
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    entry.target.classList.add('visible');
+                }
+            });
+        }, { threshold: 0.1 });
+
+        faders.forEach(fader => {
+            observer.observe(fader);
+        });
+
+        function animateCounter(el, finalValue) {
+            gsap.fromTo(el, { innerText: 0 }, {
+                innerText: finalValue,
+                duration: 2,
+                snap: "innerText",
+                ease: 'power1.out',
+                scrollTrigger: {
+                    trigger: el,
+                    start: 'top 80%',
+                }
+            });
+        }
+        animateCounter(document.getElementById('value-counter-1'), 10 +"+");
+        animateCounter(document.getElementById('value-counter-2'), 98 +"%");
+
+
+        // Testimonial Slider
+        const sliderContainer = document.getElementById('testimonial-slider-container');
+        const slides = sliderContainer.querySelectorAll('.testimonial-card');
+        const dots = sliderContainer.querySelectorAll('.testimonial-dot');
+        let currentIndex = 0;
+        const totalSlides = slides.length;
+        let touchStartX = 0;
+        let touchEndX = 0;
+        let autoSlideInterval;
+
+        function updateSlider() {
+            slides.forEach((slide, index) => {
+                slide.classList.toggle('is-active', index === currentIndex);
+            });
+            dots.forEach((dot, index) => {
+                dot.classList.toggle('active', index === currentIndex);
+                dot.classList.toggle('bg-accent', index === currentIndex);
+                dot.classList.toggle('bg-gray-300', index !== currentIndex);
+            });
+        }
+
+        function startAutoSlide() {
+             autoSlideInterval = setInterval(() => {
+                currentIndex = (currentIndex + 1) % totalSlides;
+                updateSlider();
+            }, 5000);
+        }
+
+        function stopAutoSlide() {
+            clearInterval(autoSlideInterval);
+        }
+        
+        dots.forEach((dot, index) => {
+            dot.addEventListener('click', () => {
+                currentIndex = index;
+                updateSlider();
+                stopAutoSlide();
+                startAutoSlide();
+            });
+        });
+
+        sliderContainer.addEventListener('touchstart', e => {
+            touchStartX = e.changedTouches[0].screenX;
+            stopAutoSlide();
+        });
+
+        sliderContainer.addEventListener('touchend', e => {
+            touchEndX = e.changedTouches[0].screenX;
+            handleSwipe();
+            startAutoSlide();
+        });
+
+        function handleSwipe() {
+            if (touchEndX < touchStartX - 50) {
+                currentIndex = (currentIndex + 1) % totalSlides;
+            }
+            if (touchEndX > touchStartX + 50) {
+                currentIndex = (currentIndex - 1 + totalSlides) % totalSlides;
+            }
+            updateSlider();
+        }
+
+        updateSlider();
+        startAutoSlide();
+        
+        // --- NEW Insights Slider (3D Horizontal Slide) ---
+        // ...Insights now static grid, no slider logic...
+
+        // Enhanced form validation functions
+        function validateField(field, showError = true) {
+            const value = field.value.trim();
+            const fieldName = field.name;
+            let isValid = true;
+            let errorMessage = '';
+
+            // Remove existing error styling
+            field.classList.remove('border-red-500', 'border-green-500');
+            const existingError = field.parentNode.querySelector('.field-error');
+            if (existingError) existingError.remove();
+
+            switch (fieldName) {
+                case 'name':
+                    if (value.length < 2) {
+                        isValid = false;
+                        errorMessage = 'Name must be at least 2 characters long';
+                    } else if (value.length > 100) {
+                        isValid = false;
+                        errorMessage = 'Name must be less than 100 characters';
+                    }
+                    break;
+
+                case 'email':
+                    const emailRegex = /^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$/;
+                    if (!emailRegex.test(value)) {
+                        isValid = false;
+                        errorMessage = 'Please enter a valid email address';
+                    }
+                    break;
+
+                case 'message':
+                    if (value.length < 10) {
+                        isValid = false;
+                        errorMessage = 'Message must be at least 10 characters long';
+                    } else if (value.length > 2000) {
+                        isValid = false;
+                        errorMessage = 'Message must be less than 2000 characters';
+                    }
+                    break;
+
+                case 'company':
+                    if (value.length > 100) {
+                        isValid = false;
+                        errorMessage = 'Company name must be less than 100 characters';
+                    }
+                    break;
+            }
+
+            // Apply visual feedback
+            if (showError) {
+                if (isValid && value.length > 0) {
+                    field.classList.add('border-green-500');
+                } else if (!isValid) {
+                    field.classList.add('border-red-500');
+
+                    // Show error message
+                    const errorDiv = document.createElement('div');
+                    errorDiv.className = 'field-error text-red-500 text-sm mt-1';
+                    errorDiv.textContent = errorMessage;
+                    field.parentNode.appendChild(errorDiv);
+                }
+            }
+
+            return { isValid, errorMessage };
+        }
+
+        // Contact Form Handling with Enhanced Validation
+        const contactForm = document.getElementById('contact-form');
+        if (contactForm) {
+            // Add real-time validation to form fields
+            const formFields = contactForm.querySelectorAll('input[required], textarea[required], select[required]');
+            formFields.forEach(field => {
+                field.addEventListener('blur', () => validateField(field));
+                field.addEventListener('input', () => {
+                    // Remove error styling on input
+                    field.classList.remove('border-red-500');
+                    const existingError = field.parentNode.querySelector('.field-error');
+                    if (existingError) existingError.remove();
+                });
+            });
+
+            contactForm.addEventListener('submit', async function(e) {
+                e.preventDefault();
+
+                const submitButton = contactForm.querySelector('button[type="submit"]');
+                const originalButtonText = submitButton.textContent;
+
+                // Validate all fields before submission
+                let isFormValid = true;
+                const allFields = contactForm.querySelectorAll('input, textarea, select');
+
+                allFields.forEach(field => {
+                    if (field.hasAttribute('required') || field.value.trim().length > 0) {
+                        const validation = validateField(field, true);
+                        if (!validation.isValid) {
+                            isFormValid = false;
+                        }
+                    }
+                });
+
+                if (!isFormValid) {
+                    showNotification('Please correct the errors in the form before submitting.', 'error');
+                    return;
+                }
+
+                // Enhanced loading state
+                submitButton.innerHTML = `
+                    <svg class="animate-spin -ml-1 mr-3 h-5 w-5 text-white inline" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    Sending...
+                `;
+                submitButton.disabled = true;
+
+                try {
+                    const formData = new FormData(contactForm);
+                    const data = Object.fromEntries(formData.entries());
+
+                    const response = await fetch('/submit-contact', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify(data)
+                    });
+
+                    const result = await response.json();
+
+                    if (result.success) {
+                        // Show success message
+                        showNotification('🎉 Thank you! Your message has been sent successfully. We\'ll get back to you soon.', 'success');
+                        contactForm.reset();
+
+                        // Remove all field styling
+                        allFields.forEach(field => {
+                            field.classList.remove('border-red-500', 'border-green-500');
+                            const existingError = field.parentNode.querySelector('.field-error');
+                            if (existingError) existingError.remove();
+                        });
+                    } else {
+                        showNotification(result.message || 'There was an error sending your message. Please try again.', 'error');
+                    }
+                } catch (error) {
+                    console.error('Error submitting form:', error);
+                    if (error.name === 'TypeError' && error.message.includes('fetch')) {
+                        showNotification('Network error. Please check your connection and try again.', 'error');
+                    } else {
+                        showNotification('There was an error sending your message. Please try again later.', 'error');
+                    }
+                } finally {
+                    // Reset button state
+                    submitButton.innerHTML = originalButtonText;
+                    submitButton.disabled = false;
+                }
+            });
+        }
+
+        // PDF Download Functionality
+        const downloadPdfBtn = document.getElementById('download-pdf-btn');
+        
+        // Function to check if form is valid and enable/disable PDF download
+        function updatePdfDownloadButton() {
+            const contactForm = document.getElementById('contact-form');
+            if (!contactForm) return;
+            
+            const name = contactForm.querySelector('[name="name"]').value.trim();
+            const email = contactForm.querySelector('[name="email"]').value.trim();
+            const message = contactForm.querySelector('[name="message"]').value.trim();
+            
+            const isFormValid = name.length >= 2 && 
+                               email.includes('@') && 
+                               message.length >= 10;
+            
+            if (downloadPdfBtn) {
+                downloadPdfBtn.disabled = !isFormValid;
+                const helpText = downloadPdfBtn.parentNode.querySelector('p');
+                if (helpText) {
+                    helpText.textContent = isFormValid ? 
+                        'Click to download a PDF copy of your submission' : 
+                        'Fill out the form to enable PDF download';
+                }
+            }
+        }
+
+        // Add event listeners to form fields to update PDF button state
+        if (contactForm) {
+            const formFields = contactForm.querySelectorAll('input, textarea, select');
+            formFields.forEach(field => {
+                field.addEventListener('input', updatePdfDownloadButton);
+                field.addEventListener('change', updatePdfDownloadButton);
+            });
+        }
+
+        // PDF Download Handler
+        if (downloadPdfBtn) {
+            downloadPdfBtn.addEventListener('click', async function() {
+                const contactForm = document.getElementById('contact-form');
+                if (!contactForm) return;
+
+                const formData = new FormData(contactForm);
+                const data = Object.fromEntries(formData.entries());
+
+                // Validate form data
+                let isFormValid = true;
+                const allFields = contactForm.querySelectorAll('input, textarea, select');
+                
+                allFields.forEach(field => {
+                    if (field.hasAttribute('required') || field.value.trim().length > 0) {
+                        const validation = validateField(field, false);
+                        if (!validation.isValid) {
+                            isFormValid = false;
+                        }
+                    }
+                });
+
+                if (!isFormValid) {
+                    showNotification('Please fill out all required fields correctly before downloading PDF.', 'error');
+                    return;
+                }
+
+                // Show loading state
+                const originalText = downloadPdfBtn.innerHTML;
+                downloadPdfBtn.innerHTML = `
+                    <svg class="animate-spin -ml-1 mr-2 h-4 w-4 text-white inline" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    Generating PDF...
+                `;
+                downloadPdfBtn.disabled = true;
+
+                try {
+                    const response = await fetch('/download-pdf', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify(data)
+                    });
+
+                    if (response.ok) {
+                        const blob = await response.blob();
+                        const url = window.URL.createObjectURL(blob);
+                        const a = document.createElement('a');
+                        a.style.display = 'none';
+                        a.href = url;
+                        a.download = `Vishnorex_Contact_Form_${Date.now()}.pdf`;
+                        document.body.appendChild(a);
+                        a.click();
+                        window.URL.revokeObjectURL(url);
+                        document.body.removeChild(a);
+                        
+                        showNotification('📄 PDF downloaded successfully!', 'success');
+                    } else {
+                        const result = await response.json();
+                        showNotification(result.message || 'Error generating PDF. Please try again.', 'error');
+                    }
+                } catch (error) {
+                    console.error('Error downloading PDF:', error);
+                    showNotification('Error downloading PDF. Please try again.', 'error');
+                } finally {
+                    // Reset button state
+                    downloadPdfBtn.innerHTML = originalText;
+                    updatePdfDownloadButton(); // Re-enable if form is still valid
+                }
+            });
+        }
+        
+        // Enhanced notification function with better mobile support
+        function showNotification(message, type = 'info', duration = 6000) {
+            // Remove existing notifications
+            const existingNotifications = document.querySelectorAll('.notification');
+            existingNotifications.forEach(notification => {
+                notification.style.transform = 'translateX(100%)';
+                setTimeout(() => notification.remove(), 300);
+            });
+
+            const notification = document.createElement('div');
+
+            // Mobile-responsive positioning
+            const isMobile = window.innerWidth < 768;
+            const baseClasses = `notification fixed z-[200] rounded-lg shadow-2xl transform transition-all duration-500 ease-in-out`;
+
+            if (isMobile) {
+                notification.className = `${baseClasses} top-4 left-4 right-4 translate-y-[-100px] opacity-0`;
+            } else {
+                notification.className = `${baseClasses} top-4 right-4 max-w-md translate-x-full`;
+            }
+
+            // Enhanced styling based on type
+            let bgClasses, textColor, icon, borderColor;
+            switch (type) {
+                case 'success':
+                    bgClasses = ['bg-gradient-to-r', 'from-green-500', 'to-green-600'];
+                    textColor = 'text-white';
+                    borderColor = 'border-green-400';
+                    icon = `
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                        </svg>
+                    `;
+                    break;
+                case 'error':
+                    bgClasses = ['bg-gradient-to-r', 'from-red-500', 'to-red-600'];
+                    textColor = 'text-white';
+                    borderColor = 'border-red-400';
+                    icon = `
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                        </svg>
+                    `;
+                    break;
+                default:
+                    bgClasses = ['bg-gradient-to-r', 'from-blue-500', 'to-blue-600'];
+                    textColor = 'text-white';
+                    borderColor = 'border-blue-400';
+                    icon = `
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                        </svg>
+                    `;
+            }
+
+            notification.classList.add(...bgClasses, textColor, borderColor, 'border-l-4');
+
+            notification.innerHTML = `
+                <div class="p-4">
+                    <div class="flex items-start">
+                        <div class="flex-shrink-0 mr-3">
+                            ${icon}
+                        </div>
+                        <div class="flex-1 min-w-0">
+                            <p class="text-sm font-medium leading-5 break-words">${message}</p>
+                        </div>
+                        <div class="ml-4 flex-shrink-0">
+                            <button onclick="this.closest('.notification').style.transform='${isMobile ? 'translateY(-100px)' : 'translateX(100%)'}'; setTimeout(() => this.closest('.notification').remove(), 300)"
+                                    class="inline-flex text-white hover:text-gray-200 focus:outline-none focus:text-gray-200 transition-colors duration-200">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                                </svg>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            document.body.appendChild(notification);
+
+            // Animate in
+            setTimeout(() => {
+                if (isMobile) {
+                    notification.classList.remove('translate-y-[-100px]', 'opacity-0');
+                    notification.classList.add('translate-y-0', 'opacity-100');
+                } else {
+                    notification.classList.remove('translate-x-full');
+                    notification.classList.add('translate-x-0');
+                }
+            }, 100);
+
+            // Auto remove after specified duration
+            const autoRemoveTimer = setTimeout(() => {
+                if (isMobile) {
+                    notification.style.transform = 'translateY(-100px)';
+                    notification.style.opacity = '0';
+                } else {
+                    notification.style.transform = 'translateX(100%)';
+                }
+                setTimeout(() => {
+                    if (notification.parentNode) {
+                        notification.remove();
+                    }
+                }, 500);
+            }, duration);
+
+            // Clear timer if manually closed
+            notification.addEventListener('click', (e) => {
+                if (e.target.closest('button')) {
+                    clearTimeout(autoRemoveTimer);
+                }
+            });
+        }
+
+    });
+    </script>
+</body>
+</html>
