@@ -4,15 +4,19 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Vishnorex</title>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/ScrollTrigger.min.js"></script>
+
+    <!-- EmailJS for client-side email sending -->
+    <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
+
+    <!-- jsPDF for client-side PDF generation -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <style>
-        
         body {
             color: #2E2E2E;
             font-family: 'Inter', sans-serif;
@@ -514,7 +518,12 @@
                        <p class="text-base sm:text-lg text-gray-200 max-w-2xl mx-auto fade-in-up px-4">Have a project in mind or just want to learn more? We'd love to hear from you.</p>
                 </div>
                 <div class="max-w-4xl mx-auto fade-in-up">
-                    <form id="contact-form" action="/submit-contact" method="post">
+                    <form id="contact-form" name="contact" method="POST" data-netlify="true" netlify-honeypot="bot-field">
+                        <!-- Hidden honeypot field for spam protection -->
+                        <div style="display: none;">
+                            <label>Don't fill this out if you're human: <input name="bot-field" /></label>
+                        </div>
+
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
                             <div>
                                 <label for="full-name" class="block text-sm font-medium mb-2">Full Name</label>
@@ -871,7 +880,17 @@
             return { isValid, errorMessage };
         }
 
-        // Contact Form Handling with Enhanced Validation
+        // EmailJS Configuration
+        // Initialize EmailJS with your public key
+        // Replace 'YOUR_PUBLIC_KEY' with your actual EmailJS public key from https://www.emailjs.com/
+        // For now, we'll use a placeholder - the form will fallback to Netlify Forms
+        try {
+            emailjs.init('YOUR_PUBLIC_KEY'); // Replace with your EmailJS public key
+        } catch (error) {
+            console.log('EmailJS not configured, will use Netlify Forms fallback');
+        }
+
+        // Contact Form Handling with Client-Side Processing
         const contactForm = document.getElementById('contact-form');
         if (contactForm) {
             // Add real-time validation to form fields
@@ -883,6 +902,7 @@
                     field.classList.remove('border-red-500');
                     const existingError = field.parentNode.querySelector('.field-error');
                     if (existingError) existingError.remove();
+                    updatePdfDownloadButton(); // Update PDF button state
                 });
             });
 
@@ -924,39 +944,29 @@
                     const formData = new FormData(contactForm);
                     const data = Object.fromEntries(formData.entries());
 
-                    // Determine the correct backend URL
-                    const backendUrl = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
-                        ? 'http://localhost:3001/submit-contact'
-                        : '/submit-contact';
-
-                    const response = await fetch(backendUrl, {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                        },
-                        body: JSON.stringify(data)
-                    });
-
-                    // Check if response is ok and has content
-                    if (!response.ok) {
-                        throw new Error(`HTTP error! status: ${response.status}`);
-                    }
-
-                    // Check if response has content before parsing JSON
-                    const responseText = await response.text();
-                    if (!responseText.trim()) {
-                        throw new Error('Empty response from server');
-                    }
-
-                    let result;
+                    // Method 1: Try EmailJS first (if configured)
                     try {
-                        result = JSON.parse(responseText);
-                    } catch (jsonError) {
-                        console.error('Invalid JSON response:', responseText);
-                        throw new Error('Invalid response format from server');
-                    }
+                        // Check if EmailJS is properly configured
+                        if (typeof emailjs === 'undefined' || !window.emailjs) {
+                            throw new Error('EmailJS not configured');
+                        }
 
-                    if (result.success) {
+                        // Replace with your EmailJS service ID, template ID, and form data
+                        const emailResult = await emailjs.send(
+                            'YOUR_SERVICE_ID', // Replace with your EmailJS service ID
+                            'YOUR_TEMPLATE_ID', // Replace with your EmailJS template ID
+                            {
+                                from_name: data.name,
+                                from_email: data.email,
+                                company: data.company || 'Not specified',
+                                service_interest: data.interest,
+                                message: data.message,
+                                to_email: 'vishnorextech@gmail.com' // Your admin email
+                            }
+                        );
+
+                        console.log('EmailJS Success:', emailResult);
+
                         // Show success message
                         showNotification('🎉 Thank you! Your message has been sent successfully. We\'ll get back to you soon.', 'success');
                         contactForm.reset();
@@ -967,16 +977,42 @@
                             const existingError = field.parentNode.querySelector('.field-error');
                             if (existingError) existingError.remove();
                         });
-                    } else {
-                        showNotification(result.message || 'There was an error sending your message. Please try again.', 'error');
+
+                        updatePdfDownloadButton(); // Update PDF button state
+
+                    } catch (emailError) {
+                        console.log('EmailJS failed, falling back to Netlify Forms:', emailError);
+
+                        // Method 2: Fallback to Netlify Forms
+                        const netlifyResponse = await fetch('/', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                            body: new URLSearchParams({
+                                'form-name': 'contact',
+                                ...data
+                            }).toString()
+                        });
+
+                        if (netlifyResponse.ok) {
+                            showNotification('🎉 Thank you! Your message has been sent successfully. We\'ll get back to you soon.', 'success');
+                            contactForm.reset();
+
+                            // Remove all field styling
+                            allFields.forEach(field => {
+                                field.classList.remove('border-red-500', 'border-green-500');
+                                const existingError = field.parentNode.querySelector('.field-error');
+                                if (existingError) existingError.remove();
+                            });
+
+                            updatePdfDownloadButton();
+                        } else {
+                            throw new Error('Netlify form submission failed');
+                        }
                     }
+
                 } catch (error) {
                     console.error('Error submitting form:', error);
-                    if (error.name === 'TypeError' && error.message.includes('fetch')) {
-                        showNotification('Network error. Please check your connection and try again.', 'error');
-                    } else {
-                        showNotification('There was an error sending your message. Please try again later.', 'error');
-                    }
+                    showNotification('There was an error sending your message. Please try again later.', 'error');
                 } finally {
                     // Reset button state
                     submitButton.innerHTML = originalButtonText;
@@ -985,31 +1021,120 @@
             });
         }
 
-        // PDF Download Functionality
+        // Client-Side PDF Generation using jsPDF
         const downloadPdfBtn = document.getElementById('download-pdf-btn');
-        
+
         // Function to check if form is valid and enable/disable PDF download
         function updatePdfDownloadButton() {
             const contactForm = document.getElementById('contact-form');
             if (!contactForm) return;
-            
+
             const name = contactForm.querySelector('[name="name"]').value.trim();
             const email = contactForm.querySelector('[name="email"]').value.trim();
             const message = contactForm.querySelector('[name="message"]').value.trim();
-            
-            const isFormValid = name.length >= 2 && 
-                               email.includes('@') && 
+
+            const isFormValid = name.length >= 2 &&
+                               email.includes('@') &&
                                message.length >= 10;
-            
+
             if (downloadPdfBtn) {
                 downloadPdfBtn.disabled = !isFormValid;
                 const helpText = downloadPdfBtn.parentNode.querySelector('p');
                 if (helpText) {
-                    helpText.textContent = isFormValid ? 
-                        'Click to download a PDF copy of your submission' : 
+                    helpText.textContent = isFormValid ?
+                        'Click to download a PDF copy of your submission' :
                         'Fill out the form to enable PDF download';
                 }
             }
+        }
+
+        // Client-side PDF generation function
+        function generatePDF(formData) {
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF();
+
+            // Set up colors and fonts
+            const primaryColor = [22, 42, 128]; // #162A80
+            const secondaryColor = [107, 114, 128]; // #6b7280
+            const textColor = [17, 24, 39]; // #111827
+
+            // Header
+            doc.setFontSize(20);
+            doc.setTextColor(...primaryColor);
+            doc.text('VISHNOREX', 20, 30);
+
+            doc.setFontSize(12);
+            doc.setTextColor(...secondaryColor);
+            doc.text(`Preview ID: ${Date.now()}`, 150, 30);
+
+            // Title
+            doc.setFontSize(18);
+            doc.setTextColor(...primaryColor);
+            doc.text('Contact Form Preview', 105, 50, { align: 'center' });
+
+            // Date
+            doc.setFontSize(10);
+            doc.setTextColor(...secondaryColor);
+            const currentDate = new Date().toLocaleString('en-US', {
+                weekday: 'long',
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit',
+                timeZoneName: 'short'
+            });
+            doc.text(`Generated on: ${currentDate}`, 105, 60, { align: 'center' });
+
+            // Contact Information Section
+            let yPos = 80;
+            doc.setFontSize(14);
+            doc.setTextColor(...primaryColor);
+            doc.text('Contact Information', 20, yPos);
+
+            yPos += 15;
+            doc.setFontSize(11);
+            doc.setTextColor(...textColor);
+
+            // Form fields
+            const fields = [
+                { label: 'Full Name:', value: formData.name || 'Not provided' },
+                { label: 'Email Address:', value: formData.email || 'Not provided' },
+                { label: 'Company:', value: formData.company || 'Not provided' },
+                { label: 'Service Interest:', value: formData.interest || 'Not specified' }
+            ];
+
+            fields.forEach(field => {
+                doc.setFont(undefined, 'bold');
+                doc.text(field.label, 20, yPos);
+                doc.setFont(undefined, 'normal');
+                doc.text(field.value, 60, yPos);
+                yPos += 12;
+            });
+
+            // Message Section
+            yPos += 10;
+            doc.setFontSize(14);
+            doc.setTextColor(...primaryColor);
+            doc.text('Message', 20, yPos);
+
+            yPos += 15;
+            doc.setFontSize(11);
+            doc.setTextColor(...textColor);
+
+            // Handle long messages with text wrapping
+            const message = formData.message || 'No message provided';
+            const splitMessage = doc.splitTextToSize(message, 170);
+            doc.text(splitMessage, 20, yPos);
+
+            // Footer
+            yPos = 270; // Near bottom of page
+            doc.setFontSize(9);
+            doc.setTextColor(...secondaryColor);
+            doc.text('This is a preview document generated from the Vishnorex contact form.', 105, yPos, { align: 'center' });
+            doc.text('This is not a submitted form.', 105, yPos + 10, { align: 'center' });
+
+            return doc;
         }
 
         // Add event listeners to form fields to update PDF button state
@@ -1060,39 +1185,18 @@
                 downloadPdfBtn.disabled = true;
 
                 try {
-                    // Use the same backend URL logic as the form submission
-                    const backendUrl = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
-                        ? 'http://localhost:3001/download-pdf'
-                        : '/download-pdf';
+                    // Generate PDF using client-side jsPDF
+                    const pdf = generatePDF(data);
 
-                    const response = await fetch(backendUrl, {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                        },
-                        body: JSON.stringify(data)
-                    });
+                    // Download the PDF
+                    const filename = `Vishnorex_Contact_Form_${Date.now()}.pdf`;
+                    pdf.save(filename);
 
-                    if (response.ok) {
-                        const blob = await response.blob();
-                        const url = window.URL.createObjectURL(blob);
-                        const a = document.createElement('a');
-                        a.style.display = 'none';
-                        a.href = url;
-                        a.download = `Vishnorex_Contact_Form_${Date.now()}.pdf`;
-                        document.body.appendChild(a);
-                        a.click();
-                        window.URL.revokeObjectURL(url);
-                        document.body.removeChild(a);
-                        
-                        showNotification('📄 PDF downloaded successfully!', 'success');
-                    } else {
-                        const result = await response.json();
-                        showNotification(result.message || 'Error generating PDF. Please try again.', 'error');
-                    }
+                    showNotification('📄 PDF downloaded successfully!', 'success');
+
                 } catch (error) {
-                    console.error('Error downloading PDF:', error);
-                    showNotification('Error downloading PDF. Please try again.', 'error');
+                    console.error('Error generating PDF:', error);
+                    showNotification('Error generating PDF. Please try again.', 'error');
                 } finally {
                     // Reset button state
                     downloadPdfBtn.innerHTML = originalText;
