@@ -922,7 +922,12 @@
                     const formData = new FormData(contactForm);
                     const data = Object.fromEntries(formData.entries());
 
-                    const response = await fetch('/submit-contact', {
+                    // Determine the correct backend URL
+                    const backendUrl = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+                        ? 'http://localhost:3001/submit-contact'
+                        : '/submit-contact';
+
+                    const response = await fetch(backendUrl, {
                         method: 'POST',
                         headers: {
                             'Content-Type': 'application/json',
@@ -930,7 +935,24 @@
                         body: JSON.stringify(data)
                     });
 
-                    const result = await response.json();
+                    // Check if response is ok and has content
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! status: ${response.status}`);
+                    }
+
+                    // Check if response has content before parsing JSON
+                    const responseText = await response.text();
+                    if (!responseText.trim()) {
+                        throw new Error('Empty response from server');
+                    }
+
+                    let result;
+                    try {
+                        result = JSON.parse(responseText);
+                    } catch (jsonError) {
+                        console.error('Invalid JSON response:', responseText);
+                        throw new Error('Invalid response format from server');
+                    }
 
                     if (result.success) {
                         // Show success message
