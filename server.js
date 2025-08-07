@@ -529,23 +529,7 @@ app.post('/download-pdf', rateLimit, (req, res) => {
             ]
           ]
         },
-        layout: {
-          fillColor: function (rowIndex) {
-            return (rowIndex % 2 === 0) ? '#f8fafc' : null;
-          },
-          hLineWidth: function (i, node) {
-            return (i === 0 || i === node.table.body.length) ? 1 : 0.5;
-          },
-          vLineWidth: function (i, node) {
-            return (i === 0 || i === node.table.widths.length) ? 1 : 0.5;
-          },
-          hLineColor: function () {
-            return '#e2e8f0';
-          },
-          vLineColor: function () {
-            return '#e2e8f0';
-          }
-        },
+        layout: 'lightHorizontalLines',
         margin: [0, 0, 0, 25]
       },
 
@@ -566,13 +550,7 @@ app.post('/download-pdf', rateLimit, (req, res) => {
             }]
           ]
         },
-        layout: {
-          fillColor: '#f8fafc',
-          hLineWidth: 1,
-          vLineWidth: 1,
-          hLineColor: '#e2e8f0',
-          vLineColor: '#e2e8f0'
-        },
+        layout: 'noBorders',
         margin: [0, 0, 0, 30]
       },
 
