@@ -85,27 +85,65 @@ Your contact form has been converted to a **client-side only solution** that wor
 
 ## 🧪 Testing Your Setup
 
-### Local Testing
-1. Open `index.html` in your browser
-2. Fill out the contact form
-3. Test both form submission and PDF download
+### ⚠️ Important: Local Testing Setup
+
+**Don't open `index.html` directly in your browser!** This causes CORS errors.
+
+#### Option 1: Python Server (Recommended)
+```bash
+python local-server.py
+```
+Then open: http://localhost:8000
+
+#### Option 2: Node.js Server
+```bash
+node local-server.js
+```
+Then open: http://localhost:8000
+
+#### Option 3: Use Live Server Extension
+If using VS Code, install "Live Server" extension and right-click `index.html` → "Open with Live Server"
+
+### Local Testing Steps
+1. Start local server (see options above)
+2. Open http://localhost:8000 in your browser
+3. Fill out the contact form
+4. Submit form (will show in terminal)
+5. Test PDF download functionality
 
 ### Production Testing
 1. Deploy to Netlify
-2. Test form submission (check your email)
+2. Test form submission (check your email if EmailJS configured)
 3. Check Netlify Dashboard → Forms for submissions
 4. Test PDF download functionality
 
 ## 🔍 Troubleshooting
 
+### Common Errors & Solutions
+
+#### ❌ "POST https://api.emailjs.com/api/v1.0/email/send 400 (Bad Request)"
+- **Cause**: EmailJS credentials not configured
+- **Solution**: Either configure EmailJS properly or ignore this error (form will use Netlify Forms fallback)
+- **Fix**: Replace `YOUR_PUBLIC_KEY`, `YOUR_SERVICE_ID`, `YOUR_TEMPLATE_ID` in the code
+
+#### ❌ "Access to fetch at 'file:///' blocked by CORS policy"
+- **Cause**: Opening HTML file directly in browser
+- **Solution**: Use local server for testing
+- **Fix**: Run `python local-server.py` or `node local-server.js`
+
+#### ❌ "POST https://vishnorex.com/ 404 (Not Found)"
+- **Cause**: Testing on live site without Netlify Forms enabled
+- **Solution**: Deploy to Netlify first, or use local server for testing
+- **Fix**: Netlify automatically handles forms with `data-netlify="true"`
+
 ### EmailJS Issues
+- **Error**: "The Public Key is invalid"
+  - **Solution**: Get real credentials from EmailJS dashboard
+  - **Note**: Form will work with Netlify Forms even without EmailJS
+
 - **Error**: "EmailJS is not defined"
   - **Solution**: Check if EmailJS script is loaded
   - **Check**: Network tab in browser dev tools
-
-- **Error**: "Invalid service ID"
-  - **Solution**: Verify your EmailJS service ID is correct
-  - **Check**: EmailJS dashboard for correct IDs
 
 ### Netlify Forms Issues
 - **Forms not appearing in dashboard**

@@ -11,8 +11,7 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/ScrollTrigger.min.js"></script>
 
-    <!-- EmailJS for client-side email sending -->
-    <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
+    <!-- Contact form uses Netlify Forms - no external email service needed -->
 
     <!-- jsPDF for client-side PDF generation -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
@@ -519,6 +518,9 @@
                 </div>
                 <div class="max-w-4xl mx-auto fade-in-up">
                     <form id="contact-form" name="contact" method="POST" data-netlify="true" netlify-honeypot="bot-field">
+                        <!-- Hidden form name field for Netlify Forms -->
+                        <input type="hidden" name="form-name" value="contact" />
+                        
                         <!-- Hidden honeypot field for spam protection -->
                         <div style="display: none;">
                             <label>Don't fill this out if you're human: <input name="bot-field" /></label>
@@ -559,7 +561,8 @@
                              <button type="submit" class="bg-accent text-white font-semibold px-10 py-4 rounded-lg shadow-lg text-lg inline-block transform hover:scale-105 transition-all duration-300">
                                 Send Message
                             </button>
-                            <div class="text-center">
+                            <!-- PDF download button hidden -->
+                            <div class="text-center" style="display: none;">
                                 <button type="button" id="download-pdf-btn" class="bg-transparent text-white font-medium px-6 py-2 rounded-lg border-2 border-white hover:bg-white hover:text-blue-900 transition-all duration-300 text-sm" disabled>
                                     📄 Download PDF Copy
                                 </button>
@@ -880,15 +883,8 @@
             return { isValid, errorMessage };
         }
 
-        // EmailJS Configuration
-        // Initialize EmailJS with your public key
-        // Replace 'YOUR_PUBLIC_KEY' with your actual EmailJS public key from https://www.emailjs.com/
-        // For now, we'll use a placeholder - the form will fallback to Netlify Forms
-        try {
-            emailjs.init('YOUR_PUBLIC_KEY'); // Replace with your EmailJS public key
-        } catch (error) {
-            console.log('EmailJS not configured, will use Netlify Forms fallback');
-        }
+        // Using Netlify Forms only - no EmailJS configuration needed
+        console.log('Contact form configured for Netlify Forms');
 
         // Contact Form Handling with Client-Side Processing
         const contactForm = document.getElementById('contact-form');
@@ -941,74 +937,52 @@
                 submitButton.disabled = true;
 
                 try {
-                    const formData = new FormData(contactForm);
-                    const data = Object.fromEntries(formData.entries());
+                    // Check if we're running locally or on Netlify
+                    const isLocal = window.location.hostname === 'localhost' || 
+                                   window.location.hostname === '127.0.0.1' || 
+                                   window.location.port !== '';
 
-                    // Method 1: Try EmailJS first (if configured)
-                    try {
-                        // Check if EmailJS is properly configured
-                        if (typeof emailjs === 'undefined' || !window.emailjs) {
-                            throw new Error('EmailJS not configured');
-                        }
+                    if (isLocal) {
+                        // Local testing - simulate successful submission
+                        console.log('Local testing mode - simulating form submission');
+                        const formData = new FormData(contactForm);
+                        const data = Object.fromEntries(formData.entries());
+                        console.log('Form data that would be submitted:', data);
+                        
+                        // Simulate network delay
+                        await new Promise(resolve => setTimeout(resolve, 1000));
+                        
+                        console.log('✅ Local form submission simulated successfully');
+                    } else {
+                        // Production - submit to Netlify Forms
+                        const formData = new FormData(contactForm);
 
-                        // Replace with your EmailJS service ID, template ID, and form data
-                        const emailResult = await emailjs.send(
-                            'YOUR_SERVICE_ID', // Replace with your EmailJS service ID
-                            'YOUR_TEMPLATE_ID', // Replace with your EmailJS template ID
-                            {
-                                from_name: data.name,
-                                from_email: data.email,
-                                company: data.company || 'Not specified',
-                                service_interest: data.interest,
-                                message: data.message,
-                                to_email: 'vishnorextech@gmail.com' // Your admin email
-                            }
-                        );
-
-                        console.log('EmailJS Success:', emailResult);
-
-                        // Show success message
-                        showNotification('🎉 Thank you! Your message has been sent successfully. We\'ll get back to you soon.', 'success');
-                        contactForm.reset();
-
-                        // Remove all field styling
-                        allFields.forEach(field => {
-                            field.classList.remove('border-red-500', 'border-green-500');
-                            const existingError = field.parentNode.querySelector('.field-error');
-                            if (existingError) existingError.remove();
-                        });
-
-                        updatePdfDownloadButton(); // Update PDF button state
-
-                    } catch (emailError) {
-                        console.log('EmailJS failed, falling back to Netlify Forms:', emailError);
-
-                        // Method 2: Fallback to Netlify Forms
-                        const netlifyResponse = await fetch('/', {
+                        const response = await fetch('/', {
                             method: 'POST',
-                            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-                            body: new URLSearchParams({
-                                'form-name': 'contact',
-                                ...data
-                            }).toString()
+                            headers: { "Content-Type": "application/x-www-form-urlencoded" },
+                            body: new URLSearchParams(formData).toString()
                         });
 
-                        if (netlifyResponse.ok) {
-                            showNotification('🎉 Thank you! Your message has been sent successfully. We\'ll get back to you soon.', 'success');
-                            contactForm.reset();
-
-                            // Remove all field styling
-                            allFields.forEach(field => {
-                                field.classList.remove('border-red-500', 'border-green-500');
-                                const existingError = field.parentNode.querySelector('.field-error');
-                                if (existingError) existingError.remove();
-                            });
-
-                            updatePdfDownloadButton();
-                        } else {
-                            throw new Error('Netlify form submission failed');
+                        if (!response.ok) {
+                            console.log('Netlify Forms submission failed:', response.status);
+                            throw new Error('Form submission failed');
                         }
+                        
+                        console.log('✅ Netlify Forms submission successful');
                     }
+
+                    // Show success message for both local and production
+                    showNotification('🎉 Thank you! Your message has been sent successfully. We\'ll get back to you soon.', 'success');
+                    contactForm.reset();
+
+                    // Remove all field styling
+                    allFields.forEach(field => {
+                        field.classList.remove('border-red-500', 'border-green-500');
+                        const existingError = field.parentNode.querySelector('.field-error');
+                        if (existingError) existingError.remove();
+                    });
+
+                    updatePdfDownloadButton(); // Update PDF button state
 
                 } catch (error) {
                     console.error('Error submitting form:', error);
